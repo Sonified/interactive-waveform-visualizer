@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Waveform Visualizer</title>
+    <link rel="icon" type="image/png" href="images/Waveform_Visualizer_Icon_v2.png">
+    <style>
+        /* General Body and Layout */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* max-width: 1200px; */ /* REMOVED this line */
+            margin: 0 auto;
+            padding: 0px 20px; /* ✨ REMOVED vertical padding ✨ */
+            /* background-color: #f5f5f5; */ /* Replaced with gradient */
+            /* background: linear-gradient(to top left, #d8d8d8, #f8f8f8); */ /* Darker grey bottom-right to lighter grey top-left */
+            /* background: linear-gradient(to top right, #d8d8d8, #f8f8f8); */ /* Original: Dark bottom-left to light top-right */
+            background: linear-gradient(to top right, #c8c8c8, #f0f0f0); /* Slightly Darker Gradient */
+            color: #333;
+           /*  min-height: 100vh; */ /* Ensure gradient covers full viewport height */
+            min-height: 100vh; /* ✨ RESTORED min-height ✨ */
+            display: flex; /* ✨ ADDED flex display ✨ */
+            flex-direction: column; /* ✨ ADDED flex direction ✨ */
+        }
+        
+        /* Remove spinner arrows from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 10px; /* ✨ Reduced bottom margin below MAIN TITLE✨ */
+            margin-top: 0; /* Minimize top margin */
+        }
+        h1 {
+            color: #2c3e50;
+            margin-top: 8px; /* Add 8px space above title */
+            margin-bottom: 0px; /* Reduced bottom margin to 0 */
+            font-size: 1.8em; /* Slightly smaller font size */
+            text-shadow: none; /* Remove text shadow */
+        }
+        p {
+            line-height: 1.5;
+            /* color: #e0e0e0; */ /* REMOVED: Incorrect general color */
+        }
+        /* Target p tag specifically within header */
+        header p {
+            margin-top: 0; /* Remove top margin */
+            margin-bottom: 0; /* Remove bottom margin too for tightness */
+            font-size: 0.95em; /* Slightly smaller text */
+            color: #555; /* Slightly lighter color */
+        }
+
+        /* Make direct child paragraphs in Audio File panel darker (e.g., "Supported:") */
+        /* .controls-file > p { */ /* REMOVED: Incorrect selector */
+            /* color: #a9a9a9; */ /* Darker color for light theme */
+            /* font-size: 13px; */ /* Match file info size */
+        /* } */
+
+        /* Main Layout Grid */
+        .container {
+            display: grid;
+            /* Changed left column to fixed 300px */
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            align-items: start;
+            flex-grow: 1; /* ✨ ADDED flex-grow to fill vertical space ✨ */
+        }
+        .controls, .visualizer {
+            /* Explicitly remove all visual styling from .visualizer */
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            /* Ensure comments from previous attempts are cleaned up */
+        }
+
+        /* Controls Column Styling */
+        .controls h2, .controls h3 {
+            margin-top: 0;
+            margin-bottom: 10px; /* ✨ Reduced space below ✨ */
+            color: #34495e;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+        .controls h3 {
+            font-size: 1.1em;
+        }
+
+        /* General Control Elements */
+        select, button, input[type="file"], input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button {
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-align: center;
+            font-weight: bold;
+        }
+        button:disabled {
+            background-color: #bdc3c7 !important;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Combined Play/Pause Button Styles */
+        .play-style { /* Ready to Play state (shows "Play...") */
+            background-color: #90ee90; /* Soft Green */
+            color: white; /* Ensure text is white */
+        }
+        .play-style:hover:not(:disabled) {
+             background-color: #80d080; /* Darker Green */
+        }
+        .pause-style { /* Currently Playing state (shows "Pause...") */
+            /* background-color: #f08080; */ /* Original Soft Red */
+            background-color: #ff6b6b; /* Brighter Red */
+            color: white; /* Ensure text is white */
+        }
+         .pause-style:hover:not(:disabled) {
+             /* background-color: #e07070; */ /* Original Darker Red */
+             background-color: #f08080; /* Use previous standard red for hover */
+         }
+
+        /* Slider Layout */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .slider-container label {
+            flex-basis: 100px;
+            flex-shrink: 0;
+            margin-bottom: 0;
+            text-align: right;
+            font-weight: normal;
+            font-size: 13px;
+        }
+        .slider-container input[type="range"] {
+            flex-grow: 1;
+            margin-bottom: 0;
+            padding: 5px 0;
+            height: 20px;
+            width: 100%; /* Explicitly fill allocated flex space */
+        }
+        .slider-container .slider-value {
+            min-width: 55px;
+            text-align: right;
+            font-size: 13px;
+            color: #555;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+         .control-group:last-child {
+             border-bottom: none;
+             padding-bottom: 0;
+             margin-bottom: 0;
+         }
+
+        /* Visualizer Area Styling */
+        .visualizer h2, .visualizer h3 {
+             margin-top: 0;
+             margin-bottom: 15px;
+             color: #34495e;
+        }
+         .visualizer h3 {
+            font-size: 1.1em;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 8px;
+         }
+        canvas {
+            display: block;
+            width: 100%;
+            background-color: #f8f9fa; /* Default background for canvases */
+            border: 1px solid #ddd; /* Default border */
+            margin-bottom: 10px;
+            /* height: auto; */ /* Let JS control height */
+        }
+        /* .waveform canvas { height: 200px; } */ /* REMOVED fixed height */
+        /* .spectrogram canvas { height: 300px; } */ /* REMOVED fixed height */
+
+        /* Style for Spectrogram Axis Canvas */
+        #spectrogram-axis-canvas {
+            /* height: 300px; */ /* REMOVED fixed height */
+            background-color: white !important; /* Match panel background - Force override */
+            border: none; /* Ensure no border */
+            width: 100%; /* Fill its 30px wrapper */
+            display: block;
+            box-sizing: border-box;
+            position: relative; /* Add relative positioning */
+            top: -5px; /* Shift upwards by 5px */
+        }
+
+        /* ADD styles for Waveform Axis Canvases */
+        #instantaneous-waveform-axis-canvas,
+        #scrolling-waveform-axis-canvas {
+            /* height: 200px; */ /* REMOVED fixed height */
+            background-color: white !important; /* Match panel background */
+            border: none; /* Ensure no border */
+            width: 100%; /* Fill its wrapper */
+            display: block;
+            box-sizing: border-box;
+        }
+
+        /* Set up horizontal layout for each visualization section */
+        .visualization-container {
+            display: flex;
+            margin-bottom: 20px; /* Space between visualization sections */
+            gap: 20px; /* Space between canvas and controls */
+            align-items: stretch; /* CHANGED: Make children stretch vertically */
+            /* Remove border and padding from container, panel handles it */
+            /* border-bottom: 1px solid #eee; */ 
+            /* padding-bottom: 20px; */ 
+        }
+        .visualization-container:last-of-type {
+             border-bottom: none;
+             padding-bottom: 0;
+             margin-bottom: 0; /* No bottom margin for the last one */
+         }
+
+        /* ADD styles for the new panel */
+        .visualization-panel {
+            background-color: white;
+            /* Adjust padding: Top=10px, Right/Left=20px, Bottom=20px */
+            padding: 10px 20px 20px 20px; 
+            border-radius: 8px;
+            /* Reduced shadow */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); 
+            /* inset 4px 0 5px -3px rgba(0, 0, 0, 0.1); */ /* ✨ REMOVED AGAIN: Inset shadow ✨ */
+            /* Reduced borders */
+            border-left: 3px solid #ddd; 
+            border-bottom: 3px solid #ddd; 
+            margin-bottom: 10px; /* Reduce space between panels */
+        }
+        .visualization-panel:last-of-type {
+            margin-bottom: 0; /* No margin for the last panel */
+         }
+
+        /* Canvas container - Update to handle waveform + axis */
+        .canvas-container {
+            flex: 9; /* Canvas area takes ~90% */
+            min-width: 0; /* Prevent flex item overflow */
+            display: flex; /* Use flex for canvas + axis */
+            gap: 0; /* No gap between canvas and axis */
+        }
+        .canvas-container h3 {
+            margin-bottom: 10px;
+            border-bottom: none; /* Remove border from h3 inside here */
+            padding-bottom: 0;
+        }
+
+        /* Wrapper for the main canvas */
+        .main-canvas-wrapper {
+            flex: 1; /* Takes up most space */
+            min-width: 0; /* Prevent overflow */
+        }
+
+        /* Style the H3 titles within the main canvas wrappers */
+        .main-canvas-wrapper h3 {
+            text-align: center; /* Center the title */
+            font-size: 1.0em;  /* Make slightly smaller */
+            margin-bottom: 10px; /* Increase space below title */
+            /* Inherits margin-top: 0 from .visualizer h3 */
+        }
+
+        /* Wrapper for the axis canvas */
+        .axis-canvas-wrapper {
+            flex: 0 0 35px; /* Fixed 35px width for axis */
+            position: relative; /* For potential future absolute positioning inside */
+            /* ✨ Midnight Blue Theme Override ✨ */
+            /* Ensure axis wrappers don't get unwanted dark backgrounds */
+            background-color: transparent !important;
+        }
+        /* Hide the h3 in the axis wrapper visually but keep for layout */
+        .axis-canvas-wrapper h3 {
+            visibility: hidden;
+            color: #555;
+            /* margin-right: 10px; */ /* ✨ REMOVED: Explicit space added to the RIGHT of the number display ✨ */
+        }
+
+        /* Controls container */
+        .vis-controls-container {
+            flex: 1; /* Controls area takes ~10% */
+            min-width: 300px; /* Increased slightly again */
+            display: flex; /* ADDED: Make this a flex container */
+            align-items: center; /* ADDED: Vertically center its child (.vis-controls) */
+        }
+
+        /* Keep other styles for controls */
+        .vis-controls {
+            background-color: #f5f5f5; /* Made slightly darker */
+            padding: 15px 0px 15px 15px;  /* ✨ PADDING: Top Right Bottom Left ✨ */
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-top: 0;
+            /* Remove bottom margin as container handles spacing */
+            /* margin-bottom: 20px; */
+        }
+        /* ✨ Styles for the rows containing sliders in the RIGHT column (Visualizers) ✨ */
+        .vis-controls .slider-container {
+            margin-bottom: 12px; /* ✨ Vertical space between slider rows ✨ */
+            display: flex;       /* ✨ Use flexbox to arrange label, slider, value horizontally ✨ */
+            align-items: center; /* ✨ Vertically align items in the middle of the row ✨ */
+            gap: 5px;          /* ✨ Horizontal space between the label, slider, and value ✨ */
+        }
+        /* ✨ Styles for the LABEL text next to sliders in the RIGHT column ✨ */
+        .vis-controls .slider-container label {
+            flex-basis: 90px; /* ✨ Width allocated for the LEFT label text (DO NOT CHANGE THIS) ✨ */
+            flex-shrink: 0;   /* ✨ Prevent label from shrinking if space is tight ✨ */
+            text-align: right;/* ✨ Align label text to the right ✨ */
+            margin-bottom: 0; /* Override general label style */
+            font-size: 13px;
+            font-weight: normal;
+        }
+        /* ✨ Styles for the SLIDER TRACK (the range input) in the RIGHT column ✨ */
+        .vis-controls .slider-container input[type="range"] {
+            flex-grow: 1;     /* ✨ Allow slider track to expand and fill available horizontal space ✨ */
+            margin: 0;
+            padding: 0;
+            height: 20px; /* Maintain consistent height */
+        }
+        /* ✨ Styles for the numeric VALUE display next to sliders in the RIGHT column ✨ */
+        .vis-controls .slider-container .slider-value {
+            flex-basis: 10px; /* ✨ Initial width allocated for the number display ✨ */
+            flex-shrink: 0;   /* ✨ Prevent number display from shrinking ✨ */
+            text-align: left;/* ✨ Align numbers to the right - THIS NEEDED TO BE CHANGED TO LEFT TO BE CLOSER TO SLIDERS✨ */
+            font-size: 13px;
+            color: #555;
+        }
+        
+        /* Special handling for the select elements */
+        .vis-controls .slider-container select {
+            position: absolute;
+            left: 95px; /* Start after label */
+            width: 150px; /* Match the slider width */
+            max-width: 150px; /* Ensure it matches */
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .vis-controls select {
+            width: 100%; /* Make selects take full width */
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .vis-controls-label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #34495e;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        /* Info Text */
+        .info {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            line-height: 1.5;
+            clear: both;
+        }
+         .info p { margin-bottom: 10px; }
+        .file-info p {
+            margin: 5px 0;
+            font-size: 13px;
+            white-space: nowrap;     /* Prevent text wrapping */
+            overflow: hidden;        /* Hide overflowing text */
+            text-overflow: ellipsis; /* Add ellipsis (...) */
+            max-width: 100%;         /* Ensure it respects container width */
+            color: #a9a9a9; /* ✨ Use the desired grey color for file info text ✨ */
+        }
+
+        /* Style the file info display area */
+        #file-info-display {
+            text-align: center; /* Center the text within the div */
+            margin-top: 10px;   /* Add some space above it */
+        }
+
+        /* Override for the "Supported:" line specifically */
+        .controls-file p.file-info {
+            color: #868585; /* Apply the grey color */
+            /* margin-top: 0; */ /* ✨ Set margin above to 0 ✨ */
+            /* Add centering and negative margin to pull text up */
+            text-align: center; /* Center the text horizontally */
+            margin-top: -12px;   /* Pull the text up further */
+        }
+
+        /* --- Force margin-bottom: 0 on the Load File button container --- */
+        #load-file-container {
+            margin-bottom: 0 !important; 
+            padding-bottom: 0 !important; /* Also force padding-bottom to 0 */
+        }
+        /* --------------------------------------------------------------- */
+
+        /* Special handling for the select elements */
+        .vis-controls .slider-container select,
+        #color-scheme,
+        #spectrogram-scale-type {
+            position: absolute;
+            left: 95px; /* Start after label */
+            width: 150px; /* Match the slider width */
+            max-width: 150px; /* Ensure it matches */
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Fix the container styles for color scheme and freq scale */
+        .vis-controls div[style*="display: flex"] {
+            position: relative;
+            height: 30px;
+            margin-bottom: 12px;
+        }
+        
+        /* Fix their labels too */
+        .vis-controls div[style*="display: flex"] label {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 90px;
+            font-size: 13px;
+            font-weight: normal;
+        }
+
+        /* Audio file input styling */
+        input[type="file"].empty-file {
+            background-color: #90ee90; /* Same green as play button */
+            border-color: #80d080;
+            padding: 8px;
+            border-radius: 4px;
+            /* Ensure breathing class is present initially if needed */
+            /* The .breathing class is added/removed by HTML/JS logic */
+        }
+        
+        /* Breathing animation using BRIGHTNESS (for select dropdown) */
+        @keyframes breathing-filter-light {
+            0%, 100% { filter: brightness(1);    }
+            50%      { filter: brightness(0.87); }
+        }
+        
+        /* Breathing animation ONLY for button backgrounds */
+        @keyframes breathing-bg-light {
+            0%, 100% { background-color: #90ee90; } /* Base play-style green */
+            50%      { background-color: #80d080; } /* Hover play-style green */
+        }
+        
+        /* Apply light theme breathing animation to specific buttons when class is present */
+        #choose-local-file-button.breathing,
+        #play-pause-generated-button.breathing {
+            animation: breathing-bg-light 1s ease-in-out infinite;
+        }
+        
+        /* Apply light theme FILTER breathing animation to select dropdown */
+        #preloaded-audio-select.breathing {
+            animation: breathing-filter-light 1s ease-in-out infinite;
+        }
+
+        /* Main Layout Grid */
+        .container {
+            display: grid;
+            /* Changed left column to fixed 300px */
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        .controls-file, .controls-generated, .visualizer {
+            background-color: white;
+            padding: 5px 20px 15px 20px; /* ✨ Further reduced top padding, reduced bottom too ✨ */
+            border-radius: 8px;
+            /* Remove general shadow here, apply specifically */
+            /* box-shadow: 0 4px 8px rgba(0,0,0,0.15); */ 
+        }
+        
+        /* Visual distinction between panels */
+        .controls-file {
+            margin-bottom: 10px; /* ✨ Reduced bottom margin ✨ */
+            /* Reduced borders */
+            border-left: 3px solid #3498db; 
+            border-bottom: 3px solid #3498db; 
+            /* Reduced shadow (light theme) */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        
+        .controls-generated {
+            /* border-left: 4px solid #3498db; */ /* Blue accent for generated audio */
+            /* border-bottom: 4px solid #3498db; */ /* ✨ RESTORED: Matching bottom border ✨ */
+            /* Reduced borders */
+            border-left: 3px solid #3498db; 
+            border-bottom: 3px solid #3498db; 
+            /* Reduced shadow (light theme) */
+            box-shadow: 0 2px 6px rgba(52, 152, 219, 0.25); 
+        }
+
+        /* Specific adjustment for playback rate label */
+        #playback-rate-container label {
+            flex-basis: 60px; /* Reduce label width */
+        }
+
+        /* Restore absolute positioning for dropdown containers */
+        #waveform-window-container,
+        #fft-size-container,
+        #color-scheme-container, 
+        #freq-scale-container {
+            display: block; /* Override flex */
+            position: relative;
+            height: 30px;
+            gap: 0; /* Override flex gap */
+        }
+
+        #waveform-window-container label,
+        #fft-size-container label,
+        #color-scheme-container label, 
+        #freq-scale-container label {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 90px;
+            flex-basis: auto; /* Override flex */
+        }
+
+        #waveform-window-container select,
+        #fft-size-container select,
+        #color-scheme-container select,
+        #freq-scale-container select {
+            position: absolute;
+            left: 95px; 
+            width: 150px; 
+            max-width: 150px; 
+            top: 50%;
+            transform: translateY(-50%);
+            flex-grow: 0; /* Override flex */
+            padding: 5px; /* Add some padding back */
+            margin-bottom: 0; /* Override general select style */
+        }
+
+        /* Ensure the alignment span in FFT/Window size containers is hidden */
+        #waveform-window-container .slider-value,
+        #fft-size-container .slider-value {
+            display: none; 
+        }
+
+        /* Show/hide adjustment panels based on checkbox */
+        #slider-adjust-toggle:checked ~ #left-slider-controls,
+        #slider-adjust-toggle:checked ~ #right-slider-controls {
+            display: block;
+        }
+
+        /* Add dotted border to slider rows when adjustments are active */
+        #slider-adjust-toggle:checked ~ .container .slider-container,
+        #slider-adjust-toggle:checked ~ .container .vis-controls .slider-container {
+             border: 1px dashed #aaa;
+        }
+
+        /* Make control panel sliders shorter */
+        .control-row input[type="range"] {
+             flex-grow: 1;
+             margin: 0;
+             height: 18px;
+             /* width: auto; /* Override */
+         }
+
+        /* Hide adjustment panels by default */
+        #left-slider-controls,
+        #right-slider-controls {
+            display: none;
+        }
+
+        /* Specific adjustments for left column sliders */
+        .controls-file .slider-container > label,
+        .controls-generated .slider-container > label {
+            flex-basis: 70px !important; /* Force smaller label width */
+            flex-grow: 0; /* Don't allow label to grow */
+        }
+        .controls-file .slider-container > .slider-value,
+        .controls-generated .slider-container > .slider-value {
+             min-width: 50px !important; /* Force smaller value width */
+            flex-basis: 50px !important;
+             flex-grow: 0; /* Don't allow value to grow */
+        }
+        .controls-file .slider-container > input[type="range"],
+        .controls-generated .slider-container > input[type="range"],
+        .controls-file .slider-container > select,
+        .controls-generated .slider-container > select {
+             flex-grow: 1; /* Allow slider/select to fill remaining space */
+        }
+
+        /* ✨ Styles for the Theme Toggle Checkbox Container ✨ */
+        #theme-toggle-container {
+            position: fixed;
+            bottom: 15px;
+            right: 20px; /* ✨ Aligned with body padding ✨ */
+            background-color: rgba(245, 245, 245, 0.9); /* Semi-transparent light background */
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            z-index: 1000; /* Ensure it's above other elements */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #theme-toggle-container label {
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            font-weight: normal; /* Override bold label default */
+            margin-bottom: 0; /* Override block label default */
+        }
+        #theme-toggle-checkbox {
+             width: auto; /* Override full width default */
+             margin-bottom: 0; /* Override general input margin */
+             padding: 0; /* Override general input padding */
+             accent-color: #3498db; /* Style the checkmark color */
+        }
+
+        /* ✨========= MIDNIGHT BLUE THEME OVERRIDES =========✨ */
+        body.midnight-blue {
+            /* background: linear-gradient(to top left, #05081a, #10184a); */ /* ✨ Even darker blue gradient ✨ */
+            background: linear-gradient(to top right, #050b27, #131d52); /* ✨ Changed direction, adjusted darkness/lightness ✨ */
+            color: #e0e0e0; /* Light base text color */
+        }
+        body.midnight-blue header h1 {
+            color: #ffffff;
+            text-shadow: none; /* Remove text shadow */
+        }
+        body.midnight-blue header p { color: #bdc3c7; }
+
+        /* Panel Backgrounds and Borders */
+        body.midnight-blue .controls-file,
+        body.midnight-blue .controls-generated,
+        body.midnight-blue .visualization-panel {
+            /* background: linear-gradient(to top right, rgba(10, 15, 46, 0.85), rgba(45, 25, 65, 0.85)); */ /* ✨ Gradient background ✨ */
+            background-color: rgba(10, 15, 46, 0.85); /* Restore solid background */
+            /* border: 1px solid #3498db; */ /* Original Blue border */
+            /* border: 1px solid #2980b9; */ /* ✨ Darker Blue border ✨ */
+            border: 1px solid #1f618d; /* ✨ Even Darker Blue border ✨ */
+            /* Reduced shadow (dark theme) */
+            box-shadow: 0 3px 8px rgba(52, 152, 219, 0.3); 
+        }
+        body.midnight-blue .controls-file {
+            /* border-left: 4px solid #2980b9; */ /* ✨ CHANGED: Match Generated Audio darker blue ✨ */
+            /* border-bottom: 4px solid #2980b9; */ /* ✨ CHANGED: Match Generated Audio darker blue ✨ */
+            /* Reduced borders (dark theme) */
+            border-left: 3px solid #2980b9; 
+            border-bottom: 3px solid #2980b9; 
+        }
+        body.midnight-blue .controls-generated {
+             /* border-left: 4px solid #2980b9; */ /* Darker Blue accent */
+             /* border-bottom: 4px solid #2980b9; */ /* ✨ RESTORED: Matching darker bottom border ✨ */
+             /* Reduced borders (dark theme) */
+             border-left: 3px solid #2980b9; 
+             border-bottom: 3px solid #2980b9; 
+        }
+
+        /* Update visualization panel for dark theme */
+        body.midnight-blue .visualization-panel {
+            /* border-left: 4px solid #3498db; */ /* REMOVED: Replaced by inset shadow */
+            /* Reduced shadow handled by the combined rule above */
+            /* box-shadow: 0 5px 10px rgba(52, 152, 219, 0.35); */ 
+            /* inset 4px 0 5px -3px rgba(52, 152, 219, 0.5); */ /* ✨ REMOVED AGAIN: Inset shadow ✨ */
+            /* Reduced borders (dark theme) - Ensure these replace previous values */
+            border-left: 3px solid #2980b9; 
+            border-bottom: 3px solid #2980b9; 
+        }
+
+        /* Headings and Labels within Panels */
+        body.midnight-blue .controls h2, body.midnight-blue .controls h3,
+        body.midnight-blue .visualization-panel h3,
+        body.midnight-blue .vis-controls-label {
+            color: #ecf0f1; /* Light grey heading text */
+            border-bottom-color: #2c3e50; /* Darker border */
+        }
+        body.midnight-blue label { color: #bdc3c7; } /* Lighter label text */
+
+        /* Inputs, Selects, Buttons */
+        body.midnight-blue select,
+        body.midnight-blue input[type="file"],
+        body.midnight-blue input[type="text"], /* Add if needed */
+        body.midnight-blue input[type="number"] {
+            background-color: #1c2850; /* Dark input background */
+            border-color: #3498db; /* Blue border */
+            color: #e0e0e0; /* Light text */
+        }
+        body.midnight-blue select option { background-color: #1c2850; color: #e0e0e0; } /* Style dropdown options */
+
+        body.midnight-blue button { background-color: #3498db; color: white; }
+        body.midnight-blue button:hover:not(:disabled) { background-color: #2980b9; }
+        body.midnight-blue button:disabled { background-color: #566573 !important; opacity: 0.6; }
+        body.midnight-blue .play-style { 
+            /* background-color: #27ae60; */ /* Original Darker Green */
+            background-color: #2ecc71; /* Softer Green */
+            color: white; 
+        }
+        body.midnight-blue .play-style:hover:not(:disabled) { 
+            /* background-color: #229954; */ /* Original Even Darker Green */
+            background-color: #27ae60; /* Use previous standard green for hover */
+        }
+        body.midnight-blue .pause-style { 
+            /* background-color: #c0392b; */ /* Original Darker Red */
+            /* background-color: #e74c3c; */ /* Previous Lighter/Softer Red */
+            /* background-color: #ff7f7f; */ /* Previous Even Lighter/Softer Red */
+            background-color: #f3665e; /* Intermediate Soft Red */
+            color: white; 
+        }
+        body.midnight-blue .pause-style:hover:not(:disabled) { 
+            /* background-color: #a93226; */ /* Original Darker Hover Red */
+            /* background-color: #c0392b; */ /* Previous hover */
+            background-color: #e74c3c; /* Use previous standard red for hover */
+        } 
+        body.midnight-blue input[type="file"].empty-file { background-color: #27ae60; border-color: #229954; }
+
+        /* Sliders */
+        body.midnight-blue input[type="range"] {
+             /* Consider custom track/thumb styles if desired, but keep simple for now */
+             background: transparent; /* Base range input often needs reset */
+             accent-color: #3498db; /* Try styling the thumb/track progress */
+        }
+        body.midnight-blue .slider-value { color: #bdc3c7; } /* Lighter slider value text */
+
+        /* Canvases */
+        body.midnight-blue canvas {
+             background-color: #0f1a3b; /* Dark background for canvases */
+             border-color: #2c3e50; /* Dark border */
+        }
+        body.midnight-blue #spectrogram-axis-canvas,
+        body.midnight-blue #instantaneous-waveform-axis-canvas,
+        body.midnight-blue #scrolling-waveform-axis-canvas {
+            background-color: rgba(10, 15, 46, 0.8) !important; /* Match panel background */
+        }
+
+        /* Theme Toggle Box Dark Style */
+        body.midnight-blue #theme-toggle-container {
+             background-color: rgba(10, 15, 46, 0.9); /* Dark background */
+             border-color: #3498db; /* Blue border */
+         }
+        body.midnight-blue #theme-toggle-container label {
+            color: #ecf0f1; /* Light text */
+         }
+
+        /* ✨ Style the inner controls box on the right in dark mode ✨ */
+        body.midnight-blue .vis-controls {
+            background-color: rgba(28, 40, 80, 0.85); /* Slightly lighter dark blue than panel */
+            border-color: #2c3e50; /* Match heading border color */
+        }
+        /* Ensure label text and slider values inside vis-controls are light */
+        body.midnight-blue .vis-controls label,
+        body.midnight-blue .vis-controls .slider-value {
+            color: #bdc3c7; /* Already set for labels, ensure for values too */
+        }
+
+        /* ✨========= END MIDNIGHT BLUE THEME OVERRIDES =========✨ */
+
+        /* Keyframes for DARK MODE FILTER breathing effect */
+        @keyframes breathing-filter-dark {
+            0%, 100% { 
+                /* filter: brightness(0.8); */ /* Original Dim */
+                filter: brightness(1.2); /* Make bright the base state */
+            }
+            50%      { 
+                /* filter: brightness(1.2); */ /* Original Bright */
+                filter: brightness(0.8); /* Make dim the midpoint state */
+            }
+        }
+
+        /* Keyframes for DARK MODE button background breathing effect */
+        @keyframes breathing-bg-dark {
+            0%, 100% { background-color: #2ecc71; } /* Dark base play-style green */
+            50%      { background-color: #27ae60; } /* Dark hover play-style green */
+        }
+        
+        /* Use the darker breathing animation for specific buttons in midnight blue theme */
+        body.midnight-blue #choose-local-file-button.breathing,
+        body.midnight-blue #play-pause-generated-button.breathing {
+            animation-name: breathing-bg-dark; /* Override animation name only */
+        }
+
+        /* Use the darker FILTER breathing animation for select in midnight blue theme */
+        body.midnight-blue #preloaded-audio-select.breathing {
+            animation-name: breathing-filter-dark; /* Override animation name only */
+        }
+
+        /* Stop ALL breathing animations when any audio is active */
+        body.audio-active .breathing {
+            animation: none !important; /* Keep this rule to pause any active breathing */
+        }
+
+        /* Reduce margin below file input */
+        #audio-file {
+            /* margin-bottom: 5px !important; */ /* Override general input margin */
+            margin-bottom: 3px !important; /* ✨ Set margin below to 0 ✨ */
+        }
+
+        /* Styling for the Restart button specifically */
+        #restart-file-button:not(:disabled) {
+            background-color: #3498db; /* Standard blue */
+            color: white;
+            border: none; /* Match other buttons */
+        }
+        #restart-file-button:not(:disabled):hover {
+            background-color: #2980b9; /* Darker blue on hover */
+        }
+        /* Explicitly ensure dark mode uses the same blue (for specificity) */
+        body.midnight-blue #restart-file-button:not(:disabled) {
+            background-color: #3498db;
+            color: white;
+        }
+        body.midnight-blue #restart-file-button:not(:disabled):hover {
+             background-color: #2980b9;
+        }
+
+        /* Styling for the Load File button */
+        #choose-local-file-button {
+            background-color: #3498db; /* Standard blue */
+            color: white;
+            border: none; 
+        }
+        #choose-local-file-button:hover {
+            background-color: #2980b9; /* Darker blue on hover */
+        }
+        /* Ensure dark mode uses the same blue */
+        body.midnight-blue #choose-local-file-button {
+            background-color: #3498db;
+            color: white;
+        }
+        body.midnight-blue #choose-local-file-button:hover {
+             background-color: #2980b9;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Interactive Waveform Visualizer</h1>
+        <!-- <p>Generate waveforms, add noise, or play audio files. Visualize in real-time!</p> -->
+    </header>
+
+    <div class="container">
+        <div style="grid-column: 1;">
+            <!-- Audio File Panel -->
+            <div class="controls-file">
+                <h2>Audio File</h2>
+
+                <div class="control-group">
+                    <label for="preloaded-audio-select" style="text-align:left;">Select Pre-loaded File:</label>
+                    <select id="preloaded-audio-select" style="margin-bottom: 10px;" class="breathing">
+                        <option value="">-- Select a file --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+
+                    <!-- Removed original label for file input -->
+                    <div id="load-file-container" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="file" id="audio-file" accept="audio/*" class="empty-file" style="display: none;">
+                        <button id="choose-local-file-button" style="flex-grow: 1;" class="breathing">Or Load a File</button>
+                        <!-- Removed span#selected-file-name -->
+                    </div>
+
+                    <p class="file-info" style="font-size: 12px;">Supported: <span id="browser-formats">Checking...</span></p> <!-- Adjusted margin -->
+                    <div style="display: flex; gap: 5px; margin-bottom: 10px;"> <!-- Flex container for buttons -->
+                        <button id="play-pause-file-button" class="play-style" disabled style="flex-grow: 1;">Play</button> <!-- Let Play button grow -->
+                        <button id="restart-file-button" disabled style="flex-grow: 0;">Restart</button> <!-- Fixed width Restart button, removed play-style -->
+                    </div>
+                    <div id="playback-rate-container" class="slider-container" style="margin-top: 10px;">
+                        <label for="playback-rate">Speed:</label>
+                        <input type="range" id="playback-rate" min="0" max="100" value="62" step="1" disabled>
+                        <span id="playback-rate-value" class="slider-value">1.00x</span>
+                    </div>
+                    <div class="info file-info" id="file-info-display">
+                         <p>File: None Loaded</p><p>Duration: NA</p> <!-- Updated Default Placeholder Text -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Generated Audio Panel -->
+            <div class="controls-generated">
+                <h2>Generated Audio</h2>
+
+                <div class="control-group">
+                    <h3>Waveform</h3>
+                    <div class="slider-container">
+                        <label for="waveform-type">Type:</label>
+                        <select id="waveform-type" style="flex-grow: 1; margin-bottom: 0;">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                        <span class="slider-value" style="min-width: 55px;"></span> </div>
+                    <div class="slider-container">
+                        <label for="frequency-log">Freq (Log):</label>
+                        <input type="range" id="frequency-log" min="0" max="100" value="50" step="1">
+                        <span id="frequency-log-value" class="slider-value">220Hz</span>
+                    </div>
+                    <div class="slider-container">
+                        <label for="frequency">Freq (Lin):</label>
+                        <input type="range" id="frequency" min="20" max="20000" value="220" step="1">
+                        <span id="frequency-value" class="slider-value">220Hz</span>
+                    </div>
+                    <div class="slider-container">
+                        <label for="amplitude">Amplitude:</label>
+                        <input type="range" id="amplitude" min="0" max="1" value="0.5" step="0.01">
+                        <span id="amplitude-value" class="slider-value">0.50</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Noise</h3>
+                    <div class="slider-container">
+                        <label for="noise-type">Type:</label>
+                        <select id="noise-type" style="flex-grow: 1; margin-bottom: 0;">
+                            <option value="white">White</option>
+                            <option value="pink">Pink</option>
+                            <option value="brown">Brown</option>
+                        </select>
+                        <span class="slider-value" style="min-width: 55px;"></span> </div>
+                    <div class="slider-container">
+                        <label for="noise-level">Level:</label>
+                        <input type="range" id="noise-level" min="0" max="1" value="0" step="0.01">
+                        <span id="noise-level-value" class="slider-value">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <button id="play-pause-generated-button" class="play-style breathing">Play Generated</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualizer">
+            <!-- Wrap each visualization-container in a visualization-panel -->
+            <div class="visualization-panel">
+            <!-- INSTANTANEOUS WAVEFORM -->
+            <div class="visualization-container">
+                <div class="canvas-container">
+                    <!-- Main Waveform Canvas Wrapper -->
+                    <div class="main-canvas-wrapper">
+                    <h3>Instantaneous Waveform</h3>
+                    <canvas id="instantaneous-waveform-canvas"></canvas>
+                    </div>
+                    <!-- Axis Canvas Wrapper -->
+                    <div class="axis-canvas-wrapper">
+                         <h3>Axis</h3> <!-- Placeholder for alignment -->
+                         <canvas id="instantaneous-waveform-axis-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="vis-controls-container">
+                    <div class="vis-controls waveform-controls">
+                        <span class="vis-controls-label">Instantaneous Display</span>
+                        <div class="slider-container">
+                            <label for="waveform-zoom">Zoom (X):</label>
+                            <input type="range" id="waveform-zoom" min="1" max="10" value="1" step="1">
+                            <span id="waveform-zoom-value" class="slider-value">1x</span>
+                        </div>
+                        <div class="slider-container">
+                            <label for="waveform-scale">Scale (Y):</label>
+                            <input type="range" id="waveform-scale" min="0.1" max="5" value="1" step="0.1">
+                            <span id="waveform-scale-value" class="slider-value" style="margin-right: 10px;">1.0</span>
+                        </div>
+                        <div id="waveform-window-container" class="slider-container" style="margin-top: 10px;">
+                           <label for="waveform-window-size">Window Size:</label>
+                           <select id="waveform-window-size">
+                               <option value="256">256</option>
+                               <option value="512">512</option>
+                               <option value="1024">1024</option>
+                               <option value="2048" selected>2048</option>
+                               <option value="4096">4096</option>
+                               <option value="8192">8192</option>
+                           </select>
+                           <span id="waveform-window-size-value" class="slider-value"></span>
+                           </div>
+                           <div class="slider-container" style="margin-top: 8px;"> 
+                               <label for="link-fft-size-checkbox" style="flex-basis: 180px; flex-grow: 1;">Link to Spectrogram FFT Size</label>
+                               <input type="checkbox" id="link-fft-size-checkbox"> 
+                               <span class="slider-value"></span>
+                           </div>
+                       </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+            <!-- SCROLLING WAVEFORM -->
+            <div class="visualization-container">
+                 <div class="canvas-container">
+                    <!-- Main Scrolling Waveform Canvas Wrapper -->
+                    <div class="main-canvas-wrapper">
+                    <h3>Scrolling Waveform</h3>
+                    <canvas id="scrolling-waveform-canvas"></canvas>
+                    </div>
+                    <!-- Axis Canvas Wrapper -->
+                    <div class="axis-canvas-wrapper">
+                         <h3>Axis</h3> <!-- Placeholder for alignment -->
+                         <canvas id="scrolling-waveform-axis-canvas"></canvas>
+                    </div>
+                </div>
+                 <div class="vis-controls-container">
+                    <div class="vis-controls scrolling-waveform-controls">
+                        <span class="vis-controls-label">Scrolling Display</span>
+                        <div class="slider-container">
+                            <label for="scroll-speed-waveform">Scroll Speed:</label>
+                            <input type="range" id="scroll-speed-waveform" min="0.1" max="10" value="1" step="0.1">
+                            <span id="scroll-speed-waveform-value" class="slider-value" style="margin-right: 10px;">2.0</span>
+                        </div>
+                        <div class="slider-container">
+                            <label for="scrolling-downsample">Downsample:</label>
+                            <input type="range" id="scrolling-downsample" min="1" max="250" value="150" step="1">
+                            <span id="scrolling-downsample-value" class="slider-value"></span>
+                        </div>
+                        <div class="slider-container">
+                            <label for="scrolling-scale">Scale (Y):</label>
+                            <input type="range" id="scrolling-scale" min="0.1" max="5" value="1" step="0.1">
+                            <span id="scrolling-scale-value" class="slider-value"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+            <!-- SPECTROGRAM -->
+            <div class="visualization-container">
+                 <div class="canvas-container">
+                    <!-- Main Spectrogram Canvas Wrapper -->
+                    <div class="main-canvas-wrapper" style="flex: 1; min-width: 0;"> <!-- Renamed div class for consistency -->
+                    <h3>Spectrogram</h3>
+                    <canvas id="spectrogram-canvas"></canvas>
+                    </div>
+                    <!-- Axis Canvas Wrapper -->
+                    <div class="axis-canvas-wrapper" style="flex: 0 0 35px;"> <!-- Renamed div class and adjusted width -->
+                         <h3>Axis</h3> <!-- Placeholder for alignment -->
+                         <canvas id="spectrogram-axis-canvas"></canvas>
+                    </div>
+                </div>
+                 <div class="vis-controls-container">
+                     <div class="vis-controls spectrogram-controls">
+                        <span class="vis-controls-label">Spectrogram Display</span>
+                        <div class="slider-container">
+                            <label for="scroll-speed">Scroll Speed:</label>
+                            <input type="range" id="scroll-speed" min="0.1" max="10" value="1" step="0.1">
+                            <span id="scroll-speed-value" class="slider-value" style="margin-right: 10px;">2.0</span>
+                        </div>
+                            <div id="color-scheme-container" class="slider-container" style="margin-top: 10px;">
+                               <label for="color-scheme">Color Scheme:</label>
+                               <select id="color-scheme">
+                                <option value="inferno">Inferno</option>
+                                <option value="viridis">Viridis</option>
+                                <option value="magma">Magma</option>
+                                <option value="plasma">Plasma</option>
+                                <option value="bwr">Blue-White-Red</option>
+                                <option value="grayscale">Grayscale</option>
+                            </select>
+                               <span class="slider-value"></span>
+                        </div>
+                            <div id="freq-scale-container" class="slider-container">
+                               <label for="spectrogram-scale-type">Freq Scale:</label>
+                               <select id="spectrogram-scale-type">
+                                <option value="log" selected>Logarithmic</option>
+                                <option value="linear">Linear</option>
+                            </select>
+                               <span class="slider-value"></span>
+                        </div>
+                        <div id="fft-size-container" class="slider-container" style="margin-top: 10px;">
+                           <label for="window-size">FFT Size:</label>
+                            <select id="window-size">
+                                   <option value="256">256</option>
+                               <option value="512">512</option>
+                               <option value="1024">1024</option>
+                               <option value="2048">2048</option>
+                               <option value="4096">4096</option>
+                               <option value="8192" selected>8192</option>
+                           </select>
+                           <span id="fft-size-value" class="slider-value"></span>
+                           </div>
+                           <div class="slider-container" style="margin-top: 8px;"> 
+                               <label for="link-to-waveform-checkbox" style="flex-basis: 180px; flex-grow: 1;">Link to Waveform Window Size</label>
+                               <input type="checkbox" id="link-to-waveform-checkbox"> 
+                               <span class="slider-value"></span>
+                           </div>
+                       </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> </div> 
+    <!-- REMOVE THE ENTIRE SCRIPT BLOCK THAT WAS HERE -->
+
+    <!-- Slider Adjustment Controls (Initially Hidden) -->
+    <div style="margin-top: 30px; padding: 15px; background-color: #e0e0e0; border-radius: 8px; display: none;">
+        <input type="checkbox" id="slider-adjust-toggle" style="margin-right: 10px;">
+        <label for="slider-adjust-toggle" style="font-weight: bold; cursor: pointer;">Show Slider Layout Adjustments</label>
+    
+        <div id="left-slider-controls" style="margin-top: 15px; padding: 15px; border: 1px solid #ccc; background: #f8f8f8;"> <!-- Removed display:none -->
+            <h3 style="margin-top: 0;">Left Column Sliders (Generated/File)</h3>
+             <div class="control-row">
+                 <label for="left-layout-grid">Layout:</label>
+                 <input type="checkbox" id="left-layout-grid"> Use Grid
+             </div>
+             <div class="control-row">
+                  <label for="left-gap">Gap (px):</label>
+                  <input type="range" id="left-gap" min="0" max="30" value="10" step="1"> <!-- Default 10px -->
+                  <span class="value-display" id="left-gap-value">10px</span>
+             </div>
+             <div class="control-row">
+                 <label for="left-padding-left">Padding Left (px):</label>
+                  <input type="range" id="left-padding-left" min="0" max="30" value="0" step="1">
+                 <span class="value-display" id="left-padding-left-value">0px</span>
+             </div>
+             <div class="control-row">
+                  <label for="left-padding-right">Padding Right (px):</label>
+                  <input type="range" id="left-padding-right" min="0" max="30" value="0" step="1">
+                  <span class="value-display" id="left-padding-right-value">0px</span>
+              </div>
+             <div class="control-row">
+                 <label for="left-label-width">Label Width:</label>
+                 <input type="range" id="left-label-width" min="40" max="150" value="70" step="1">
+                 <span class="value-display" id="left-label-width-value">70px</span>
+                 <button class="unit-toggle" id="left-label-unit-toggle">Use %</button>
+                 <input type="hidden" id="left-label-unit" value="px"> 
+             </div>
+             <div class="control-row">
+                 <label for="left-value-width">Value Width:</label>
+                 <input type="range" id="left-value-width" min="30" max="100" value="50" step="1">
+                 <span class="value-display" id="left-value-width-value">50px</span>
+                 <button class="unit-toggle" id="left-value-unit-toggle">Use %</button>
+                 <input type="hidden" id="left-value-unit" value="px">
+             </div>
+        </div>
+
+        <div id="right-slider-controls" style="margin-top: 15px; padding: 15px; border: 1px solid #ccc; background: #f8f8f8;"> <!-- Removed display:none -->
+             <h3 style="margin-top: 0;">Right Column Sliders (Visualizer)</h3>
+              <div class="control-row">
+                 <label for="right-layout-grid">Layout:</label>
+                 <input type="checkbox" id="right-layout-grid"> Use Grid
+             </div>
+              <div class="control-row">
+                  <label for="right-gap">Gap (px):</label>
+                  <input type="range" id="right-gap" min="0" max="30" value="5" step="1"> <!-- Default 5px -->
+                 <span class="value-display" id="right-gap-value">5px</span>
+             </div>
+             <div class="control-row">
+                 <label for="right-padding-left">Padding Left (px):</label>
+                  <input type="range" id="right-padding-left" min="0" max="30" value="0" step="1">
+                 <span class="value-display" id="right-padding-left-value">0px</span>
+             </div>
+              <div class="control-row">
+                  <label for="right-padding-right">Padding Right (px):</label>
+                  <input type="range" id="right-padding-right" min="0" max="30" value="0" step="1">
+                  <span class="value-display" id="right-padding-right-value">0px</span>
+              </div>
+             <div class="control-row">
+                 <label for="right-label-width">Label Width:</label>
+                 <input type="range" id="right-label-width" min="40" max="150" value="90" step="1">
+                 <span class="value-display" id="right-label-width-value">90px</span>
+                  <button class="unit-toggle" id="right-label-unit-toggle">Use %</button>
+                  <input type="hidden" id="right-label-unit" value="px">
+             </div>
+             <div class="control-row">
+                 <label for="right-value-width">Value Width:</label>
+                 <input type="range" id="right-value-width" min="5" max="100" value="10" step="1"> <!-- Default 10px based on your test -->
+                  <span class="value-display" id="right-value-width-value">10px</span>
+                 <button class="unit-toggle" id="right-value-unit-toggle">Use %</button>
+                 <input type="hidden" id="right-value-unit" value="px">
+             </div>
+        </div>
+    </div>
+
+    <!-- ADD NEW SCRIPT TAGS HERE -->
+    <script src="js/config.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/ui.js"></script>
+    <!-- <script src="js/slider_adjust.js"></script> -->
+    <script src="js/main.js"></script>
+
+    <!-- ✨ Theme Toggle Checkbox HTML ✨ -->
+    <div id="theme-toggle-container">
+        <input type="checkbox" id="theme-toggle-checkbox">
+        <label for="theme-toggle-checkbox">Midnight Blue</label>
+    </div>
+</body>
+</html>
+
