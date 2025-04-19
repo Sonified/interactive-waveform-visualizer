@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Use XMLHttpRequest for progress tracking
             xhr = new XMLHttpRequest(); // Assign to the outer scope variable
+            console.log(`[Cache Check?] Intending to fetch ${filePath} via XHR.`);
             xhr.open('GET', filePath, true);
             xhr.responseType = 'arraybuffer';
 
@@ -205,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // --- Add Cancel Button Listener --- 
                 const cancelButton = document.getElementById('loading-cancel-button');
                 const cancelHandler = () => { // Define handler separately to remove it later
+                    console.log("Cancel handler entered. Current xhr state:", xhr);
                     console.log("Cancel button clicked.");
                     if (xhr) {
                         xhr.abort(); // Abort the download

@@ -669,8 +669,8 @@ export function updateLoadingProgress(loadedBytes, totalBytes) { // <-- Add expo
     if (!progressBarFill || !loadingProgressText) return;
 
     if (totalBytes > 0) {
-        // Make the bar visually fill twice as fast, capped at 100%
-        const percentComplete = Math.min(100, Math.round((loadedBytes / totalBytes) * 200)); 
+        // Revert to accurate percentage calculation
+        const percentComplete = Math.round((loadedBytes / totalBytes) * 100);
         progressBarFill.style.width = `${percentComplete}%`;
         
         const loadedMB = (loadedBytes / (1024 * 1024)).toFixed(2);
