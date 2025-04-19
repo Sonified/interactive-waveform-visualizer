@@ -23,13 +23,17 @@ import { // <-- Add imports from audio.js
     handleFileSelect, handleFileLoad, handleFileError,
     initializeAudioContext,
     setFirstPlayDone, // <-- Import the new function
+    rememberSpacebarPauseState, // <-- Import spacebar state functions
+    resetSpacebarPauseState,    // <-- Import spacebar state functions
     // Variables / Nodes / State
     audioContext, oscillator, oscillatorGain, noiseGain, 
     waveformAnalyser,
     analyser,
     audioBuffer, isFilePlaying, isGeneratedPlaying, isPreviewing, isFirstPlay, 
-    fileReader, audioSource,
-    noiseSource // <-- Add noiseSource import
+    fileReader, audioSource, noiseSource,
+    lastUserInitiatedSource, // <-- Add lastUserInitiatedSource import
+    wasFilePlayingBeforeSpacePause, // <-- Import spacebar state
+    wasGeneratedPlayingBeforeSpacePause // <-- Import spacebar state
 } from './audio.js';
 
 // --- Button State Helper ---
@@ -152,15 +156,18 @@ export function setupUIEventListeners(controls) {
         // --- NEW: Handle cancellation ---
         if (!file) { // Exit if no file selected (e.g., user cancelled)
              const infoDisplay = document.getElementById('file-info-display');
-             if (infoDisplay) {
+             // Only reset display if no buffer is currently loaded
+             if (infoDisplay && !audioBuffer) { 
                  infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
              }
-             // --- NEW: Disable playback slider on cancel ---
+             // --- NEW: Disable playback slider on cancel ONLY if no buffer is loaded ---
              const playbackRateSlider = document.getElementById('playback-rate');
-             if (playbackRateSlider) {
+             console.log("Cancellation detected. audioBuffer:", audioBuffer, "Slider currently disabled:", playbackRateSlider ? playbackRateSlider.disabled : 'N/A'); // <-- Log BEFORE check
+             if (playbackRateSlider && !audioBuffer) { // <-- Add !audioBuffer check
                  playbackRateSlider.disabled = true;
              }
-             // ---------------------------------------------
+             console.log("Slider disabled state AFTER cancellation check:", playbackRateSlider ? playbackRateSlider.disabled : 'N/A'); // <-- Log AFTER check
+             // ---------------------------------------------------------------------
              // Optionally update button state if needed (though likely already disabled)
              // updateButtonState(playPauseFileButton, false, true);
              return; 
@@ -268,7 +275,8 @@ export function setupUIEventListeners(controls) {
     playbackRateSlider.addEventListener('input', () => updatePlaybackRate(controls));
     fileReader.onload = handleFileLoad;
     fileReader.onerror = handleFileError;
-    document.addEventListener('keydown', handleSpacebar);
+    // Pass controls to the spacebar handler when adding listener
+    document.addEventListener('keydown', (event) => handleSpacebar(event, controls));
 
     // Add listeners for slider preview
     const generatorSliders = [
@@ -429,7 +437,7 @@ function updatePlaybackRate(controls) {
 }
 
 // Spacebar handler
-function handleSpacebar(event) {
+function handleSpacebar(event, controls) { // <-- Accept controls
      // Ignore spacebar if pressed within an input field or select
      if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
          return;
@@ -444,19 +452,18 @@ function handleSpacebar(event) {
         // If something is playing, pause it/them and remember the state
         if (isCurrentlyPlayingAnything) {
             // Remember what was playing *before* pausing
-            wasFilePlayingBeforeSpacePause = isFilePlaying;
-            wasGeneratedPlayingBeforeSpacePause = isGeneratedPlaying;
+            rememberSpacebarPauseState(isFilePlaying, isGeneratedPlaying); // <-- Use function
             
             console.log("Remembering state:", wasFilePlayingBeforeSpacePause, wasGeneratedPlayingBeforeSpacePause);
 
             // Pause whatever is currently playing
             if (isFilePlaying) {
                 console.log("Pausing File Audio via spacebar");
-                toggleFileAudio(); // Pause file
+                toggleFileAudio(controls); // <-- Pass controls
             }
             if (isGeneratedPlaying) {
                  console.log("Pausing Generated Audio via spacebar");
-                toggleGeneratedAudio(); // Pause generated
+                toggleGeneratedAudio(controls); // <-- Pass controls
             }
         }
         // If nothing is currently playing, resume based on remembered state or last user action
@@ -467,12 +474,12 @@ function handleSpacebar(event) {
             // Try resuming based on what was playing before the last spacebar pause
             if (wasFilePlayingBeforeSpacePause && audioBuffer) {
                  console.log("Resuming File Audio via spacebar");
-                toggleFileAudio(); // Resume file
+                toggleFileAudio(controls); // <-- Pass controls
                 resumedSomething = true;
             }
             if (wasGeneratedPlayingBeforeSpacePause) {
                 console.log("Resuming Generated Audio via spacebar");
-                toggleGeneratedAudio(); // Resume generated
+                toggleGeneratedAudio(controls); // <-- Pass controls
                 resumedSomething = true;
             }
 
@@ -480,15 +487,14 @@ function handleSpacebar(event) {
             if (!resumedSomething) {
                  console.log("Nothing to resume based on prior state, falling back to lastUserInitiatedSource:", lastUserInitiatedSource);
                 if (lastUserInitiatedSource === 'file' && audioBuffer) {
-                    toggleFileAudio(); // Start file
+                    toggleFileAudio(controls); // <-- Pass controls
                 } else if (lastUserInitiatedSource === 'generated') {
-                    toggleGeneratedAudio(); // Start generated
+                    toggleGeneratedAudio(controls); // <-- Pass controls
                 }
             }
             
             // Reset the flags after attempting resume, so next spacebar press while paused doesn't reuse old state
-            wasFilePlayingBeforeSpacePause = false;
-            wasGeneratedPlayingBeforeSpacePause = false;
+            resetSpacebarPauseState(); // <-- Use function
         }
          console.log("Spacebar action complete. After - File:", isFilePlaying, "Gen:", isGeneratedPlaying);
     }
@@ -616,6 +622,23 @@ const loadingOverlay = document.getElementById('loading-overlay');
 const loadingText = document.getElementById('loading-text');
 const progressBarFill = document.getElementById('progress-bar-fill');
 const loadingProgressText = document.getElementById('loading-progress-text');
+const loadingTipText = document.getElementById('loading-tip-text'); // Get the tip text element
+
+// --- Array for loading tips ---
+const LOADING_TIPS = [
+    "Thanks for your patience!",
+    "It'll be worth the wait...",
+    "Wait'll you hear this...",
+    "Have a quick stretch while you wait?",
+    "Close your eyes and take a nice deep breath?",
+    "Can you believe how fast this is going!?",
+    "Sit tight, your files are beaming from space...",
+    "You're on the right path...",
+    "Just a moment...",
+    "Here we gooooo..."
+];
+let currentTipIndex = 0;
+let tipIntervalId = null;
 
 // --- Canvas Elements (Additions for specific visualizers might go elsewhere) ---
 const waveformCanvas = document.getElementById('waveform-canvas');
@@ -623,21 +646,31 @@ const waveformCanvas = document.getElementById('waveform-canvas');
 // --- Loading Overlay Functions ---
 export function showLoadingOverlay(filename) { // <-- Add export
     console.log("Showing loading overlay for:", filename); 
-    if (!loadingOverlay || !loadingText || !progressBarFill || !loadingProgressText) {
+    if (!loadingOverlay || !loadingText || !progressBarFill || !loadingProgressText || !loadingTipText) {
         console.error("Loading overlay elements not found!");
         return;
     }
     loadingText.textContent = `Downloading ${filename}...`;
     progressBarFill.style.width = '0%';
     loadingProgressText.textContent = ''; 
+    loadingTipText.textContent = LOADING_TIPS[0]; // Show first tip immediately
+    currentTipIndex = 0; // Reset index
     loadingOverlay.style.display = 'flex';
+
+    // Start rotating tips
+    if (tipIntervalId) clearInterval(tipIntervalId); // Clear previous interval if any
+    tipIntervalId = setInterval(() => {
+        currentTipIndex = (currentTipIndex + 1) % LOADING_TIPS.length;
+        loadingTipText.textContent = LOADING_TIPS[currentTipIndex];
+    }, 4000); // Change tip every 4 seconds
 }
 
 export function updateLoadingProgress(loadedBytes, totalBytes) { // <-- Add export
     if (!progressBarFill || !loadingProgressText) return;
 
     if (totalBytes > 0) {
-        const percentComplete = Math.round((loadedBytes / totalBytes) * 100);
+        // Make the bar visually fill twice as fast, capped at 100%
+        const percentComplete = Math.min(100, Math.round((loadedBytes / totalBytes) * 200)); 
         progressBarFill.style.width = `${percentComplete}%`;
         
         const loadedMB = (loadedBytes / (1024 * 1024)).toFixed(2);
@@ -652,8 +685,15 @@ export function updateLoadingProgress(loadedBytes, totalBytes) { // <-- Add expo
 
 export function hideLoadingOverlay() { // <-- Add export
     console.log("Hiding loading overlay");
+    // Clear the tip interval
+    if (tipIntervalId) {
+        clearInterval(tipIntervalId);
+        tipIntervalId = null;
+    }
     if (!loadingOverlay) return;
     loadingOverlay.style.display = 'none';
+    // Optionally reset tip text
+    if(loadingTipText) loadingTipText.textContent = '';
 }
 
 export function updateSliderValue(sliderId, value) { // <-- Add export

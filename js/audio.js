@@ -36,11 +36,11 @@ export let isPreviewing = false; // Flag for slider preview
 export let isFirstPlay = true; // <-- Add export
 
 // Track last user-initiated play action
-let lastUserInitiatedSource = null; // 'generated' or 'file'
+export let lastUserInitiatedSource = null; // <-- Add export
 
 // Remember state before spacebar pause
-let wasFilePlayingBeforeSpacePause = false;
-let wasGeneratedPlayingBeforeSpacePause = false;
+export let wasFilePlayingBeforeSpacePause = false; // <-- Add export
+export let wasGeneratedPlayingBeforeSpacePause = false; // <-- Add export
 
 // Add gain node for file source
 let fileGainNode = null;
@@ -486,6 +486,15 @@ export function handleFileLoad(event) {
             playAudioFile();
             // Update button state to reflect playing status
             updateButtonState(playPauseFileButton, true, false);
+
+            // --- Enable Playback Slider --- 
+            const playbackRateSlider = document.getElementById('playback-rate');
+            if (playbackRateSlider) {
+                playbackRateSlider.disabled = false; // Explicitly enable here
+                console.log("Playback rate slider ENABLED after local file decode.");
+                console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled); // <-- Log added
+            }
+            // -----------------------------
         }).catch(err => { 
             console.error('Decode error:', err); 
             audioBuffer = null; 
@@ -528,6 +537,16 @@ export function handleAudioDataLoad(audioData, fileName) {
             playAudioFile();
             // Update button state to reflect playing status
             updateButtonState(playPauseFileButton, true, false);
+
+            // --- Enable Playback Slider ---
+            if (playbackRateSlider) {
+                playbackRateSlider.disabled = false; // Explicitly enable here
+                 console.log(`Playback rate slider ENABLED after preloaded/data decode for: ${fileName}`);
+                 console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled); // <-- Log added
+            } else {
+                 console.error("Could not find playback rate slider to enable.");
+            }
+            // -----------------------------
         }).catch(err => { 
             console.error(`Decode error for ${fileName}:`, err); 
             fileInfoDisplay.innerHTML = `<p>Error decoding: ${fileName}</p>`;
@@ -684,4 +703,15 @@ export function restartAudioFile(controls) {
     }
     
     // No need for explicit updateButtonState here, playAudioFile handles it.
+}
+
+// Functions to manage spacebar pause state
+export function rememberSpacebarPauseState(isFile, isGenerated) {
+    wasFilePlayingBeforeSpacePause = isFile;
+    wasGeneratedPlayingBeforeSpacePause = isGenerated;
+}
+
+export function resetSpacebarPauseState() {
+    wasFilePlayingBeforeSpacePause = false;
+    wasGeneratedPlayingBeforeSpacePause = false;
 }

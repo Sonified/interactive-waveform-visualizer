@@ -278,3 +278,32 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
     2.  In the `onload` and `onerror` handlers for the `XMLHttpRequest` used to fetch the file, `clearTimeout` is called with the stored ID. This cancels the scheduled showing of the overlay if the file load completes (successfully or with an error) before the 150ms delay has elapsed.
 *   **Result:** The overlay no longer flickers for instantly loaded files but still appears correctly for files that take longer than 150ms to load.
 
+## Spacebar Play/Pause Fixes
+
+*   **Problem:** The spacebar functionality was broken due to several `ReferenceError` and `TypeError` issues after the refactoring.
+    1.  `handleSpacebar` in `js/ui.js` couldn't access `lastUserInitiatedSource` (defined in `js/audio.js`).
+    2.  `handleSpacebar` attempted to directly assign values to imported state variables (`wasFilePlayingBeforeSpacePause`, `wasGeneratedPlayingBeforeSpacePause`), which are treated as constants in the importing module.
+    3.  `handleSpacebar` called `toggleGeneratedAudio`/`toggleFileAudio` without passing the necessary `controls` object, leading to errors when those functions tried to access button elements (e.g., `controls.playPauseGeneratedButton`).
+*   **Solution:**
+    1.  Added `export` to `lastUserInitiatedSource` in `js/audio.js` and imported it into `js/ui.js`.
+    2.  Added `export` to `wasFilePlayingBeforeSpacePause` and `wasGeneratedPlayingBeforeSpacePause` in `js/audio.js`. Created two new exported functions in `js/audio.js`: `rememberSpacebarPauseState(isFile, isGenerated)` and `resetSpacebarPauseState()`. Modified `handleSpacebar` in `js/ui.js` to import and call these functions instead of attempting direct assignment.
+    3.  Modified `handleSpacebar` in `js/ui.js` to accept the `controls` object. Updated the `document.addEventListener('keydown', ...)` call in `setupUIEventListeners` to pass `controls` to `handleSpacebar`. Updated the calls to `toggleGeneratedAudio` and `toggleFileAudio` within `handleSpacebar` to pass `controls`.
+*   **Result:** The spacebar now correctly toggles playback for the last used source (generated or file), remembering state across pauses initiated by the spacebar itself.
+
+## Playback Speed Control Enable/Disable Refinement
+
+*   **Problem:** The playback speed slider (`#playback-rate`) was not behaving correctly. Initially, it was found that cancelling a second local file load could incorrectly disable the slider even if a previously loaded file existed. Further testing revealed the slider might also become disabled immediately after the first successful file load.
+*   **Investigation & Solution:**
+    1.  The initial fix attempt involved making the slider disable logic (within the local file input cancellation handler in `js/ui.js`) conditional on `!audioBuffer`. However, this didn't fully resolve the issue.
+    2.  Added `console.log` statements to trace the `disabled` property of the slider in `js/audio.js` (after explicit enabling in `handleFileLoad`/`handleAudioDataLoad`) and in `js/ui.js` (before and after the check in the cancellation handler).
+    3.  Ensured the explicit enabling logic (`playbackRateSlider.disabled = false;`) was correctly placed within the successful decode promise handlers (`.then(...)`) in `handleFileLoad` and `handleAudioDataLoad` in `js/audio.js`.
+    4.  Confirmed the cancellation logic in `js/ui.js` correctly uses the `!audioBuffer` check (`if (playbackRateSlider && !audioBuffer)`).
+*   **Result:** The playback speed slider is now reliably enabled upon successful file decoding and remains enabled if a subsequent file load is cancelled. It is correctly disabled only on initial load, file errors, or cancellation when no valid audio buffer is present.
+
+## File Info Reset on Cancel Fix
+
+*   **Problem:** If a file (File A) was loaded and its information was displayed, initiating a *new* local file load via the "Load File" button and then cancelling the file selection dialog would incorrectly clear the info display, removing the details for File A even though it was still loaded and playable.
+*   **Cause:** The `change` event listener for the local file input (`#audio-file`) in `js/ui.js` had logic in its cancellation block (`if (!file)`) that unconditionally reset the `innerHTML` of the `#file-info-display` element to its default placeholder state.
+*   **Solution:** Modified the cancellation block in the event listener. The line that resets the `innerHTML` of `#file-info-display` was wrapped in an additional check: `if (infoDisplay && !audioBuffer)`. This ensures the display is only reset to placeholder text if no audio buffer is currently loaded when the cancellation occurs.
+*   **Result:** Cancelling the local file dialog now correctly leaves the existing file information displayed if a file was previously loaded.
+

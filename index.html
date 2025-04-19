@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Waveform Visualizer</title>
-    <link rel="icon" type="image/png" href="images/Waveform_Visualizer_Icon_v2.png">
+    <link rel="icon" type="image/png" href="Images/Waveform_Visualizer_Icon_v2.png">
     <style>
         /* General Body and Layout */
         body {
@@ -874,35 +874,61 @@
             display: none; /* Hidden by default */
             color: white;
             text-align: center;
+            padding: 20px; /* Add padding for inner elements */
+            box-sizing: border-box; /* Include padding in dimensions */
         }
         .loading-content {
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 30px;
-            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.75); /* Slightly less transparent black */
+            padding: 40px; /* Increased padding */
+            border-radius: 10px; /* More rounded corners */
+            position: relative; /* Needed for absolute positioning of cancel button */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #loading-cancel-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px; /* Larger X */
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1; /* Prevent extra vertical space */
+        }
+        #loading-cancel-button:hover {
+            color: #fff;
         }
         #loading-text {
-            font-size: 1.2em;
-            margin-bottom: 15px;
+            font-size: 1.3em; /* Slightly larger */
+            margin-bottom: 20px; /* More space below */
             color: #eee; /* Override general p color */
         }
         .progress-bar-container {
-            width: 300px; /* Adjust width as needed */
-            height: 20px;
+            width: 600px; /* Double the width */
+            height: 25px; /* Slightly thicker */
             background-color: #555;
-            border-radius: 10px;
+            border-radius: 12px; /* Match height */
             overflow: hidden; /* Keep the fill inside */
-            margin: 0 auto 10px auto; /* Center the bar */
+            margin: 0 auto 15px auto; /* Center the bar, more space below */
         }
         #progress-bar-fill {
             width: 0%; /* Start empty */
             height: 100%;
-            background-color: #4CAF50; /* Green fill */
-            border-radius: 10px;
-            transition: width 0.1s linear; /* Smooth transition for fill */
+            background-color: #3498db; /* Blue fill */
+            border-radius: 12px;
+            transition: width 0.2s linear; /* Slightly faster transition */
         }
         #loading-progress-text {
-            font-size: 0.9em;
+            font-size: 1.0em; /* Larger progress text */
             color: #ccc;
+            margin-bottom: 20px; /* Add space below progress text */
+        }
+        /* Style for the rotating tip text */
+        #loading-tip-text {
+            font-size: 1.0em;
+            color: #bbb;
+            min-height: 1.2em; /* Reserve space to prevent jumping */
+            font-style: italic;
         }
 
         /* ====================== */
@@ -1263,11 +1289,13 @@
     <!-- Loading Overlay -->
     <div id="loading-overlay">
         <div class="loading-content">
+            <div id="loading-cancel-button">✖</div> <!-- Cancel Button -->
             <p id="loading-text">Downloading...</p>
             <div class="progress-bar-container">
                 <div id="progress-bar-fill"></div>
             </div>
             <p id="loading-progress-text"></p>
+            <p id="loading-tip-text"></p> <!-- Rotating Tip Text -->
         </div>
     </div>
 </body>

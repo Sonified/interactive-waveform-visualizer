@@ -143,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     preloadedSelect.addEventListener('change', () => {
         const selectedFile = preloadedSelect.value;
+        let xhr = null; // Declare xhr here to make it accessible to cancel button
+
         if (selectedFile) {
             // --- NEW: Stop any existing audio first --- 
             stopGeneratedAudio();
@@ -162,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ----------------------------------------
 
             // Use XMLHttpRequest for progress tracking
-            const xhr = new XMLHttpRequest();
+            xhr = new XMLHttpRequest(); // Assign to the outer scope variable
             xhr.open('GET', filePath, true);
             xhr.responseType = 'arraybuffer';
 
@@ -199,6 +201,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateButtonState(uiControls.playPauseFileButton, false, true); 
                 }
                 hideLoadingOverlay(); // Hide overlay on success or expected HTTP error
+
+                // --- Add Cancel Button Listener --- 
+                const cancelButton = document.getElementById('loading-cancel-button');
+                const cancelHandler = () => { // Define handler separately to remove it later
+                    console.log("Cancel button clicked.");
+                    if (xhr) {
+                        xhr.abort(); // Abort the download
+                        console.log("XHR aborted.");
+                    }
+                    // Clear overlay timeout if it's still pending
+                    if (overlayTimeoutId) {
+                        clearTimeout(overlayTimeoutId);
+                        overlayTimeoutId = null;
+                        console.log("Overlay timeout cleared.");
+                    }
+                    hideLoadingOverlay(); // Hide overlay (this also clears the tip interval)
+                    // Reset UI elements
+                    updateButtonState(uiControls.playPauseFileButton, false, true); // Disable play/restart
+                    const infoDisplay = document.getElementById('file-info-display');
+                    if (infoDisplay) {
+                        infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
+                    }
+                    const playbackRateSlider = document.getElementById('playback-rate');
+                    if (playbackRateSlider) {
+                        playbackRateSlider.disabled = true;
+                    }
+                    // Remove this specific listener to prevent memory leaks
+                    cancelButton.removeEventListener('click', cancelHandler);
+                };
+                // Add the listener
+                if (cancelButton) {
+                    cancelButton.addEventListener('click', cancelHandler);
+                } else {
+                    console.error("Cancel button not found!");
+                }
+                // ----------------------------------
             };
 
             xhr.onerror = () => {
