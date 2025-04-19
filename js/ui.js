@@ -392,12 +392,15 @@ function updateNoiseType() {
      } 
  }
 function updateAnalyserSettings(controls) {
-    const { analyser, spectrogramCtx, spectrogramCanvas, windowSizeSelect, linkFftSizeCheckbox, waveformWindowSizeSelect, waveformAnalyser } = controls;
-    if (analyser) { 
+    console.log(`UI: updateAnalyserSettings called. New Spectrogram FFT size selected: ${controls.windowSizeSelect.value}`); // <-- ADD LOG
+    const { windowSizeSelect, linkFftSizeCheckbox, waveformWindowSizeSelect } = controls;
+    if (analyser && spectrogramCtx && spectrogramCanvas) { 
         try { 
             analyser.fftSize = parseInt(controls.windowSizeSelect.value);
             console.log("Analyser FFT size:", analyser.fftSize); 
+            console.log(`UI: Spectrogram analyser.fftSize successfully set to ${analyser.fftSize}`);
             spectrogramCtx.clearRect(0, 0, spectrogramCanvas.width, spectrogramCanvas.height); 
+            drawSpectrogramAxis();
         } catch (e) { 
             console.error("FFT size error:", e); 
         } 
@@ -410,7 +413,7 @@ function updateAnalyserSettings(controls) {
         controls.waveformWindowSizeSelect.value = spectrogramFftValue;
         // Only call the other update function if the value actually changed
         // and the other analyser isn't already set to this value.
-        if (controls.waveformAnalyser && controls.waveformAnalyser.fftSize !== parseInt(spectrogramFftValue)) {
+        if (waveformAnalyser && waveformAnalyser.fftSize !== parseInt(spectrogramFftValue)) {
             updateWaveformAnalyserSettings(controls);
         }
     }
@@ -502,11 +505,16 @@ function handleSpacebar(event, controls) { // <-- Accept controls
 
 // Update waveform analyser settings
 function updateWaveformAnalyserSettings(controls) {
-    if (controls.waveformAnalyser) {
+    console.log(`UI: updateWaveformAnalyserSettings called. New Waveform Window size selected: ${controls.waveformWindowSizeSelect.value}`); // <-- ADD LOG
+    if (waveformAnalyser) {
         try {
-            controls.waveformAnalyser.fftSize = parseInt(controls.waveformWindowSizeSelect.value);
-            console.log("Waveform Analyser FFT size set to:", controls.waveformAnalyser.fftSize);
-            // No need to clear canvases here, the drawing loops handle that
+            waveformAnalyser.fftSize = parseInt(controls.waveformWindowSizeSelect.value);
+            console.log("Waveform Analyser FFT size set to:", waveformAnalyser.fftSize);
+            console.log(`UI: Waveform analyser.fftSize successfully set to ${waveformAnalyser.fftSize}`);
+            drawInstantaneousWaveformAxis(controls);
+            if (!isGeneratedPlaying && !isFilePlaying && !isPreviewing) {
+                redrawStaticInstantaneousWaveform(controls);
+            }
         } catch (e) {
             console.error("Error setting Waveform FFT size:", e);
         }
@@ -519,8 +527,8 @@ function updateWaveformAnalyserSettings(controls) {
         controls.windowSizeSelect.value = waveformWindowValue;
         // Only call the other update function if the value actually changed
         // and the other analyser isn't already set to this value.
-        if (controls.analyser && controls.analyser.fftSize !== parseInt(waveformWindowValue)) {
-             updateAnalyserSettings(controls); 
+        if (analyser && analyser.fftSize !== parseInt(waveformWindowValue)) {
+             updateAnalyserSettings(controls);
         }
     }
 }

@@ -68,6 +68,7 @@ export function initializeAudioContext() {
             // Spectrogram Analyser (controlled by dropdown)
             analyser = audioContext.createAnalyser();
             analyser.fftSize = parseInt(windowSizeSelect.value);
+            console.log(`Audio Init: Spectrogram analyser created. Initial FFT: ${analyser.fftSize}`);
             masterGainNode.connect(analyser);
             analyser.connect(audioContext.destination); // Still connect main analyser to output
 
@@ -77,6 +78,7 @@ export function initializeAudioContext() {
             waveformAnalyser.minDecibels = analyser.minDecibels;
             waveformAnalyser.maxDecibels = analyser.maxDecibels;
             waveformAnalyser.fftSize = parseInt(waveformWindowSizeSelect.value);
+            console.log(`Audio Init: Waveform analyser created. Initial FFT: ${waveformAnalyser.fftSize}`);
             masterGainNode.connect(waveformAnalyser);
 
             // Scrolling Waveform Analyser (independent, fixed FFT)

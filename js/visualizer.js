@@ -116,7 +116,8 @@ function drawInstantaneousWaveform() {
         // Don't clear stored data here, only when explicitly stopped
         return;
     }
-    const bufferLength = waveformAnalyser.fftSize;
+    // Move bufferLength calculation inside the loop to get updated fftSize
+    const bufferLength = waveformAnalyser.fftSize; 
     const dataArray = new Uint8Array(bufferLength);
     waveformAnalyser.getByteTimeDomainData(dataArray);
 
@@ -262,6 +263,7 @@ function drawSpectrogram() {
         spectrogramAnimationId = null;
         return;
     }
+    // Move bufferLength calculation inside the loop to get updated frequencyBinCount
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     analyser.getByteFrequencyData(dataArray);
