@@ -544,3 +544,57 @@ function updateColorScheme() {
     console.log("Color scheme:", colorSchemeSelect.value); 
     spectrogramCtx.clearRect(0, 0, spectrogramCanvas.width, spectrogramCanvas.height); 
 } 
+
+const loopButton = document.getElementById('loop-button');
+const volumeSlider = document.getElementById('volume-slider');
+const volumeValue = document.getElementById('volume-value');
+
+// Loading Overlay Elements
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingText = document.getElementById('loading-text');
+const progressBarFill = document.getElementById('progress-bar-fill');
+const loadingProgressText = document.getElementById('loading-progress-text');
+
+// --- Canvas Elements (Additions for specific visualizers might go elsewhere) ---
+const waveformCanvas = document.getElementById('waveform-canvas');
+
+// --- Loading Overlay Functions ---
+export function showLoadingOverlay(filename) { // <-- Add export
+    console.log("Showing loading overlay for:", filename); 
+    if (!loadingOverlay || !loadingText || !progressBarFill || !loadingProgressText) {
+        console.error("Loading overlay elements not found!");
+        return;
+    }
+    loadingText.textContent = `Downloading ${filename}...`;
+    progressBarFill.style.width = '0%';
+    loadingProgressText.textContent = ''; 
+    loadingOverlay.style.display = 'flex';
+}
+
+export function updateLoadingProgress(loadedBytes, totalBytes) { // <-- Add export
+    if (!progressBarFill || !loadingProgressText) return;
+
+    if (totalBytes > 0) {
+        const percentComplete = Math.round((loadedBytes / totalBytes) * 100);
+        progressBarFill.style.width = `${percentComplete}%`;
+        
+        const loadedMB = (loadedBytes / (1024 * 1024)).toFixed(2);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
+        loadingProgressText.textContent = `${loadedMB} MB / ${totalMB} MB`;
+    } else {
+        // Handle cases where total size is unknown (optional)
+        progressBarFill.style.width = '100%'; // Or show indeterminate state
+        loadingProgressText.textContent = 'Downloading...';
+    }
+}
+
+export function hideLoadingOverlay() { // <-- Add export
+    console.log("Hiding loading overlay");
+    if (!loadingOverlay) return;
+    loadingOverlay.style.display = 'none';
+}
+
+// --- Initialization and Event Listeners ---
+export function setupUIEventListeners(audioContext, analyser, visualizer) {
+    // ... existing code ...
+}

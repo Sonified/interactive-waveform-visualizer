@@ -1,3 +1,11 @@
+import { initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile } from './audio.js';
+import { resizeCanvases } from './visualizer.js';
+import { 
+    updateSliderValue, setupUIEventListeners, detectAudioFormatSupport, initializeUIValues,
+    initializeTheme, setupThemeToggle, updateButtonState,
+    showLoadingOverlay, updateLoadingProgress, hideLoadingOverlay // Import the new functions
+} from './ui.js';
+
 let isFirstPlay = true; // Flag to track the first playback action
 
 // --- Add necessary DOM references globally ---
@@ -113,12 +121,59 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Fetching preloaded file: ${filePath}`);
             actualFileInput.value = ''; // Clear local file input
 
+            // --- Start Loading Overlay ---
+            showLoadingOverlay(selectedFile);
+
+            // Use XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', filePath, true);
+            xhr.responseType = 'arraybuffer';
+
+            xhr.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    updateLoadingProgress(event.loaded, event.total);
+                } else {
+                    // Optional: Handle cases where progress is not computable
+                    // updateLoadingProgress(0, 0); // Or show indeterminate state
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const audioData = xhr.response;
+                    console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}.`);
+                    handleAudioDataLoad(audioData, selectedFile); // Call function in audio.js
+                    
+                    // Update button text (moved inside success handler)
+                    const chooseFileButton = document.getElementById('choose-local-file-button');
+                    if (chooseFileButton) {
+                        chooseFileButton.textContent = 'Load File'; 
+                    }
+                } else {
+                    console.error(`HTTP error! status: ${xhr.status}`);
+                    // Maybe disable play button or show error
+                    updateButtonState(uiControls.playPauseFileButton, false, true); 
+                }
+                hideLoadingOverlay(); // Hide overlay on success or expected HTTP error
+            };
+
+            xhr.onerror = () => {
+                console.error(`Network error fetching audio file ${selectedFile}`);
+                // Maybe disable play button or show error
+                updateButtonState(uiControls.playPauseFileButton, false, true); 
+                hideLoadingOverlay(); // Hide overlay on network error
+            };
+
+            xhr.send();
+
+            /* // --- OLD Fetch code - replaced by XMLHttpRequest ---
             fetch(filePath)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    return response.arrayBuffer();
+                    // Cannot easily get progress with standard fetch .arrayBuffer()
+                    return response.arrayBuffer(); 
                 })
                 .then(audioData => {
                     // TODO: Call a function in audio.js to handle this ArrayBuffer
@@ -141,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Maybe disable play button or show error
                      updateButtonState(uiControls.playPauseFileButton, false, true); 
                 });
+            */ // --- End of OLD Fetch code ---
         } else {
             // Option "-- Select a file --" chosen
              // Potentially stop audio if it was playing a preloaded file

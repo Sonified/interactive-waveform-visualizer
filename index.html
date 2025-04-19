@@ -859,6 +859,56 @@
              background-color: #2980b9;
         }
 
+        /* Loading Overlay Styles */
+        #loading-overlay {
+            position: fixed; /* Cover the whole viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(100, 100, 100, 0.6); /* Semi-transparent gray */
+            display: flex; /* Use flexbox for centering */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Ensure it's on top */
+            display: none; /* Hidden by default */
+            color: white;
+            text-align: center;
+        }
+        .loading-content {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 8px;
+        }
+        #loading-text {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #eee; /* Override general p color */
+        }
+        .progress-bar-container {
+            width: 300px; /* Adjust width as needed */
+            height: 20px;
+            background-color: #555;
+            border-radius: 10px;
+            overflow: hidden; /* Keep the fill inside */
+            margin: 0 auto 10px auto; /* Center the bar */
+        }
+        #progress-bar-fill {
+            width: 0%; /* Start empty */
+            height: 100%;
+            background-color: #4CAF50; /* Green fill */
+            border-radius: 10px;
+            transition: width 0.1s linear; /* Smooth transition for fill */
+        }
+        #loading-progress-text {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        /* ====================== */
+        /* --- Theme Styles --- */
+        /* ====================== */
+
     </style>
 </head>
 <body>
@@ -1208,6 +1258,17 @@
     <div id="theme-toggle-container">
         <input type="checkbox" id="theme-toggle-checkbox">
         <label for="theme-toggle-checkbox">Midnight Blue</label>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <p id="loading-text">Downloading...</p>
+            <div class="progress-bar-container">
+                <div id="progress-bar-fill"></div>
+            </div>
+            <p id="loading-progress-text"></p>
+        </div>
     </div>
 </body>
 </html>
