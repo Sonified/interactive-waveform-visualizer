@@ -1,5 +1,39 @@
+import { 
+    resizeCanvases, 
+    spectrogramAxisCtx, 
+    instantaneousWaveformAxisCtx, 
+    scrollingWaveformAxisCtx, // <-- Import contexts
+    drawInstantaneousWaveformAxis,    // <-- Add import
+    redrawStaticInstantaneousWaveform, // <-- Add import
+    spectrogramCtx, // <-- Keep this one
+    drawScrollingWaveformAxis, // <-- Add import
+    redrawStaticScrollingWaveformFromImage, // <-- Add import
+    drawSpectrogramAxis // <-- Add import
+} from './visualizer.js';
+import { // Import config elements if needed by ui.js (likely not directly)
+    colorSchemeSelect, // <-- Add import
+    spectrogramCanvas, // <-- Add correct import
+    linkFftSizeCheckbox // <-- Add import
+} from './config.js';
+import { // <-- Add imports from audio.js
+    // Functions
+    toggleGeneratedAudio, toggleFileAudio, restartAudioFile, 
+    createNoiseSource, stopNoiseSource,
+    startPreviewOscillator, startPreviewNoise, stopPreviewAudio,
+    handleFileSelect, handleFileLoad, handleFileError,
+    initializeAudioContext,
+    setFirstPlayDone, // <-- Import the new function
+    // Variables / Nodes / State
+    audioContext, oscillator, oscillatorGain, noiseGain, 
+    waveformAnalyser,
+    analyser,
+    audioBuffer, isFilePlaying, isGeneratedPlaying, isPreviewing, isFirstPlay, 
+    fileReader, audioSource,
+    noiseSource // <-- Add noiseSource import
+} from './audio.js';
+
 // --- Button State Helper ---
-function updateButtonState(button, isPlaying, isDisabled = false) {
+export function updateButtonState(button, isPlaying, isDisabled = false) {
     if (!button) return;
 
     const restartButton = document.getElementById('restart-file-button'); // Get restart button
@@ -40,7 +74,7 @@ function applyTheme(themeName, canvasRefs, uiControls) {
     }
 }
 
-function initializeTheme(canvasRefs, uiControls) {
+export function initializeTheme(canvasRefs, uiControls) {
     const savedTheme = localStorage.getItem('visualizerTheme') || 'light'; // Default to light
     applyTheme(savedTheme, canvasRefs, uiControls);
     const themeToggleButton = document.getElementById('theme-toggle-checkbox');
@@ -49,7 +83,7 @@ function initializeTheme(canvasRefs, uiControls) {
     }
 }
 
-function setupThemeToggle(canvasRefs, uiControls) {
+export function setupThemeToggle(canvasRefs, uiControls) {
     const themeToggleButton = document.getElementById('theme-toggle-checkbox'); // ✨ MOVED HERE ✨
     console.log('Attempting to setup theme toggle. Button found:', themeToggleButton);
 
@@ -66,7 +100,9 @@ function setupThemeToggle(canvasRefs, uiControls) {
 }
 
 // Attaches event listeners to UI elements
-function setupEventListeners(controls) {
+export function setupUIEventListeners(controls) {
+    console.log("UI: Setting up event listeners..."); // <-- Log setup start
+    console.log("UI: Received controls object:", controls); // <-- ADD LOG TO INSPECT controls
     const {
         playPauseGeneratedButton, playPauseFileButton, audioFileInput,
         waveformTypeSelect, frequencySlider, frequencyLogSlider, amplitudeSlider,
@@ -83,15 +119,29 @@ function setupEventListeners(controls) {
     // Get the restart button
     const restartFileButton = document.getElementById('restart-file-button');
 
-    // playPauseGeneratedButton.addEventListener('click', toggleGeneratedAudio);
-    playPauseGeneratedButton.addEventListener('click', () => toggleGeneratedAudio(controls)); // ✨ Pass controls ✨
-    // playPauseFileButton.addEventListener('click', toggleFileAudio);
-    playPauseFileButton.addEventListener('click', () => toggleFileAudio(controls)); // ✨ Pass controls ✨
+    if (playPauseGeneratedButton) {
+        console.log("UI: Attaching listener to Generated Play/Pause button"); // <-- Add log
+        playPauseGeneratedButton.addEventListener('click', () => {
+            console.log("UI: Generated Play/Pause button clicked");
+            toggleGeneratedAudio(controls);
+        });
+    } else { console.warn("Generated Play/Pause button not found for listener."); }
+
+    if (playPauseFileButton) {
+        console.log("UI: Attaching listener to File Play/Pause button"); // <-- Add log
+        playPauseFileButton.addEventListener('click', () => {
+            console.log("UI: File Play/Pause button clicked");
+            toggleFileAudio(controls);
+        });
+    } else { console.warn("File Play/Pause button not found for listener."); }
     
-    // Add event listener for the restart button
     if (restartFileButton) {
-        restartFileButton.addEventListener('click', () => restartAudioFile(controls));
-    }
+        console.log("UI: Attaching listener to File Restart button"); // <-- Add log
+        restartFileButton.addEventListener('click', () => {
+            console.log("UI: File Restart button clicked");
+            restartAudioFile(controls);
+        });
+    } else { console.warn("File Restart button not found for listener."); }
 
     // audioFileInput.addEventListener('change', handleFileSelect);
     // Restore simple file input listener
@@ -144,12 +194,18 @@ function setupEventListeners(controls) {
         audioFileInput.classList.remove('empty-file');
     });
     waveformTypeSelect.addEventListener('change', updateOscillatorType);
-    frequencySlider.addEventListener('input', () => updateFrequency(controls));
+    if (frequencySlider) {
+        console.log("UI: Attaching listener to Frequency slider"); // <-- Add log
+        frequencySlider.addEventListener('input', () => {
+            // console.log("UI: Frequency slider input detected"); // Log already added in the function itself
+            updateFrequency(controls);
+        });
+    } else { console.warn("Frequency slider not found for listener."); }
     frequencyLogSlider.addEventListener('input', () => updateFrequencyLog(controls));
     amplitudeSlider.addEventListener('input', () => updateAmplitude(controls));
     noiseLevelSlider.addEventListener('input', () => updateNoiseLevel(controls));
     noiseTypeSelect.addEventListener('change', updateNoiseType);
-    windowSizeSelect.addEventListener('change', updateAnalyserSettings);
+    windowSizeSelect.addEventListener('change', () => updateAnalyserSettings(controls));
     
     // --- Synchronize Scroll Speed Sliders ---
     scrollSpeedSlider.addEventListener('input', (event) => {
@@ -222,8 +278,9 @@ function setupEventListeners(controls) {
         noiseLevelSlider
     ];
     generatorSliders.forEach(slider => {
-        slider.addEventListener("mousedown", handleGeneratorSliderInteractionStart);
-        slider.addEventListener("touchstart", handleGeneratorSliderInteractionStart, { passive: true });
+        // Pass controls to the handler
+        slider.addEventListener("mousedown", (event) => handleGeneratorSliderInteractionStart(event, controls));
+        slider.addEventListener("touchstart", (event) => handleGeneratorSliderInteractionStart(event, controls), { passive: true });
     });
 
     // document.addEventListener("mouseup", handleGeneratorSliderInteractionEnd);
@@ -234,10 +291,12 @@ function setupEventListeners(controls) {
 
     // Pass controls object to the handler
     linkToWaveformCheckbox.addEventListener('change', () => handleLinkToWaveformCheckboxChange(controls));
+
+    console.log("UI: Event listeners setup complete."); // <-- Log setup end
 }
 
 // Sets the initial text display for sliders based on their default values
-function initializeUIValues(controls) {
+export function initializeUIValues(controls) {
     const {
         frequencySlider, frequencyValue, frequencyLogSlider, frequencyLogValue,
         amplitudeSlider, amplitudeValue, noiseLevelSlider, noiseLevelValue,
@@ -270,7 +329,7 @@ function initializeUIValues(controls) {
 }
 
 // Checks browser support for common audio formats
-function detectAudioFormatSupport(spanElement) {
+export function detectAudioFormatSupport(spanElement) {
     const audio = document.createElement('audio');
     const formats = { MP3: 'audio/mpeg', WAV: 'audio/wav', OGG: 'audio/ogg; codecs="vorbis"', AAC: 'audio/mp4; codecs="mp4a.40.2"', FLAC: 'audio/flac' };
     const supported = Object.entries(formats)
@@ -281,6 +340,7 @@ function detectAudioFormatSupport(spanElement) {
 
 // --- Update Handlers for Controls ---
 function updateFrequency(controls) {
+    console.log("UI: updateFrequency called"); // <-- Add log
     const slider = controls.frequencySlider; 
     const linearFreq = parseInt(slider.value);
     controls.frequencyValue.textContent = linearFreq + 'Hz';
@@ -323,10 +383,11 @@ function updateNoiseType() {
          createNoiseSource(true);
      } 
  }
-function updateAnalyserSettings() { 
+function updateAnalyserSettings(controls) {
+    const { analyser, spectrogramCtx, spectrogramCanvas, windowSizeSelect, linkFftSizeCheckbox, waveformWindowSizeSelect, waveformAnalyser } = controls;
     if (analyser) { 
         try { 
-            analyser.fftSize = parseInt(windowSizeSelect.value); 
+            analyser.fftSize = parseInt(controls.windowSizeSelect.value);
             console.log("Analyser FFT size:", analyser.fftSize); 
             spectrogramCtx.clearRect(0, 0, spectrogramCanvas.width, spectrogramCanvas.height); 
         } catch (e) { 
@@ -335,14 +396,14 @@ function updateAnalyserSettings() {
     }
 
     // Add sync logic: if linked, update the waveform dropdown and its analyser
-    if (linkFftSizeCheckbox.checked && windowSizeSelect.value !== waveformWindowSizeSelect.value) {
-        const spectrogramFftValue = windowSizeSelect.value;
+    if (controls.linkFftSizeCheckbox.checked && controls.windowSizeSelect.value !== controls.waveformWindowSizeSelect.value) {
+        const spectrogramFftValue = controls.windowSizeSelect.value;
         console.log("Syncing waveform window size to spectrogram FFT size due to link.");
-        waveformWindowSizeSelect.value = spectrogramFftValue;
+        controls.waveformWindowSizeSelect.value = spectrogramFftValue;
         // Only call the other update function if the value actually changed
         // and the other analyser isn't already set to this value.
-        if (waveformAnalyser && waveformAnalyser.fftSize !== parseInt(spectrogramFftValue)) {
-            updateWaveformAnalyserSettings(); 
+        if (controls.waveformAnalyser && controls.waveformAnalyser.fftSize !== parseInt(spectrogramFftValue)) {
+            updateWaveformAnalyserSettings(controls);
         }
     }
 }
@@ -351,7 +412,7 @@ const maxLogPlaybackRate = 2;  // log2(4.0)
 const minLogPlaybackRate = -3.321928; // NEW: log2(0.1)
 
 // Helper function to convert linear slider value (0-100) to logarithmic playback rate (0.1 - 4.0)
-function sliderValueToPlaybackRate(sliderValue) {
+export function sliderValueToPlaybackRate(sliderValue) {
     const normalized = sliderValue / 100; // Normalize to 0-1
     const logRate = minLogPlaybackRate + normalized * (maxLogPlaybackRate - minLogPlaybackRate);
     return Math.pow(2, logRate);
@@ -435,10 +496,10 @@ function handleSpacebar(event) {
 
 // Update waveform analyser settings
 function updateWaveformAnalyserSettings(controls) {
-    if (waveformAnalyser) {
+    if (controls.waveformAnalyser) {
         try {
-            waveformAnalyser.fftSize = parseInt(controls.waveformWindowSizeSelect.value);
-            console.log("Waveform Analyser FFT size set to:", waveformAnalyser.fftSize);
+            controls.waveformAnalyser.fftSize = parseInt(controls.waveformWindowSizeSelect.value);
+            console.log("Waveform Analyser FFT size set to:", controls.waveformAnalyser.fftSize);
             // No need to clear canvases here, the drawing loops handle that
         } catch (e) {
             console.error("Error setting Waveform FFT size:", e);
@@ -452,8 +513,8 @@ function updateWaveformAnalyserSettings(controls) {
         controls.windowSizeSelect.value = waveformWindowValue;
         // Only call the other update function if the value actually changed
         // and the other analyser isn't already set to this value.
-        if (analyser && analyser.fftSize !== parseInt(waveformWindowValue)) {
-             updateAnalyserSettings(); 
+        if (controls.analyser && controls.analyser.fftSize !== parseInt(waveformWindowValue)) {
+             updateAnalyserSettings(controls); 
         }
     }
 }
@@ -487,13 +548,13 @@ function handleLinkToWaveformCheckboxChange(controls) {
     if (controls.linkFftSizeCheckbox.checked) { // Check the first box's state after syncing
          if (controls.windowSizeSelect.value !== controls.waveformWindowSizeSelect.value) {
              controls.windowSizeSelect.value = controls.waveformWindowSizeSelect.value;
-             updateAnalyserSettings(); // Update the analyser if the value changed
+             updateAnalyserSettings(controls); // Update the analyser if the value changed
          }
     }
 }
 
 // --- Slider Preview Handlers ---
-function handleGeneratorSliderInteractionStart(event) {
+function handleGeneratorSliderInteractionStart(event, controls) { // <-- Accept controls
     if (isGeneratedPlaying) return; // Do nothing if already playing
     
     // Ensure AudioContext is initialized for preview
@@ -515,7 +576,8 @@ function handleGeneratorSliderInteractionStart(event) {
 
     // Visually toggle button to Pause if preview started
     if (previewStarted) {
-        updateButtonState(playPauseGeneratedButton, true);
+        // Use controls object to access the button
+        updateButtonState(controls.playPauseGeneratedButton, true);
 
         // --- NEW: Stop breathing animation on first slider interaction --- 
         if (isFirstPlay) {
@@ -524,7 +586,7 @@ function handleGeneratorSliderInteractionStart(event) {
             const preloadedSelect = document.getElementById('preloaded-audio-select');
             if (chooseFileButton) chooseFileButton.classList.remove('breathing');
             if (preloadedSelect) preloadedSelect.classList.remove('breathing');
-            isFirstPlay = false; // Set the flag to prevent this from running again
+            setFirstPlayDone(); // <-- Call the imported function instead
         }
         // --- END: Stop breathing ---
     }
@@ -594,7 +656,11 @@ export function hideLoadingOverlay() { // <-- Add export
     loadingOverlay.style.display = 'none';
 }
 
-// --- Initialization and Event Listeners ---
-export function setupUIEventListeners(audioContext, analyser, visualizer) {
-    // ... existing code ...
+export function updateSliderValue(sliderId, value) { // <-- Add export
+     const span = document.getElementById(sliderId);
+     if (span) {
+         span.textContent = value;
+     } else {
+         console.warn(`Slider value span not found: ${sliderId}`);
+     }
 }

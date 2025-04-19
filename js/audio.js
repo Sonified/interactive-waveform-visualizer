@@ -1,25 +1,39 @@
+import { 
+    windowSizeSelect, waveformWindowSizeSelect, 
+    fileInfoDisplay, playPauseFileButton, playbackRateSlider,
+    amplitudeSlider,
+    waveformTypeSelect,
+    frequencySlider,
+    noiseLevelSlider,
+    noiseTypeSelect,
+    audioFileInput
+} from './config.js';
+import { updateButtonState, sliderValueToPlaybackRate } from './ui.js';
+import { startVisualization, checkAndStopVisualization } from './visualizer.js';
+
 // --- Global Audio Variables ---
-let audioContext = null;
+export let audioContext = null;
 let masterGainNode = null;
-let analyser = null;         // For Spectrogram
-let waveformAnalyser = null; // For Instantaneous Waveform
-let scrollingAnalyser = null; // For Scrolling Waveform
-let oscillator = null;
-let oscillatorGain = null;
-let noiseSource = null;
-let noiseGain = null;
-let audioBuffer = null;
-let audioSource = null;
-let fileReader = new FileReader();
+export let analyser = null;         // For Spectrogram
+export let waveformAnalyser = null; // For Instantaneous Waveform
+export let scrollingAnalyser = null; // For Scrolling Waveform
+export let oscillator = null;
+export let oscillatorGain = null;
+export let noiseSource = null;
+export let noiseGain = null;
+export let audioBuffer = null;
+export let audioSource = null;
+export let fileReader = new FileReader();
 
 // Add state for pause/resume
 let fileStartTime = 0; // Tracks hypothetical start time in AudioContext time
 let filePauseTime = 0; // Tracks pause time in AudioContext time
 
 // State flags
-let isGeneratedPlaying = false;
-let isFilePlaying = false;
-let isPreviewing = false; // Flag for slider preview
+export let isGeneratedPlaying = false;
+export let isFilePlaying = false;
+export let isPreviewing = false; // Flag for slider preview
+export let isFirstPlay = true; // <-- Add export
 
 // Track last user-initiated play action
 let lastUserInitiatedSource = null; // 'generated' or 'file'
@@ -31,9 +45,14 @@ let wasGeneratedPlayingBeforeSpacePause = false;
 // Add gain node for file source
 let fileGainNode = null;
 
+// Function to update the isFirstPlay flag
+export function setFirstPlayDone() {
+    isFirstPlay = false;
+}
+
 // --- Audio Context Management ---
-function initializeAudioContext() {
-    if (audioContext && audioContext.state === 'running') return true;
+export function initializeAudioContext() {
+    if (audioContext && audioContext.state === 'running') return audioContext; // Return existing context
     if (!audioContext) {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -70,23 +89,23 @@ function initializeAudioContext() {
             // scrollingAnalyser also does NOT connect to destination
 
             console.log("AudioContext initialized. Sample Rate:", audioContext.sampleRate);
-            return true;
+            return audioContext; // Return newly created context
         } catch (e) {
             console.error("Error creating AudioContext:", e);
             alert("Web Audio API is not supported by this browser.");
-            return false;
+            return null; // Return null on error
         }
     }
     else if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => console.log("AudioContext resumed."))
             .catch(err => console.error("Error resuming AudioContext:", err));
-        return true;
+        return audioContext; // Return existing context after attempting resume
     }
-    return false;
+    return null; // Should not be reached, but return null as fallback
 }
 
 // ✨ NEW: Simple helper to manage body class based on global audio state ✨
-function updateAudioActivityBodyClass() {
+export function updateAudioActivityBodyClass() {
     const isAudioActive = isGeneratedPlaying || isFilePlaying || isPreviewing;
     if (isAudioActive) {
         document.body.classList.add('audio-active');
@@ -97,7 +116,7 @@ function updateAudioActivityBodyClass() {
 }
 
 // --- Toggle Functions for Combined Buttons ---
-function toggleGeneratedAudio(controls) {
+export function toggleGeneratedAudio(controls) {
     if (!initializeAudioContext()) return;
 
     lastUserInitiatedSource = 'generated'; // Track user intent
@@ -120,12 +139,13 @@ function toggleGeneratedAudio(controls) {
         console.log("First play detected. Removing breathing animation from file inputs and generated play button.");
     }
 
-    updateButtonState(playPauseGeneratedButton, isGeneratedPlaying);
-    // Stop breathing animation on the play button itself when clicked (if it was still breathing)
-    playPauseGeneratedButton.classList.remove('breathing'); 
+    updateButtonState(controls.playPauseGeneratedButton, isGeneratedPlaying);
+    if (controls.playPauseGeneratedButton) {
+        controls.playPauseGeneratedButton.classList.remove('breathing');
+    }
     updateAudioActivityBodyClass();
 }
-function toggleFileAudio(controls) {
+export function toggleFileAudio(controls) {
     if (!initializeAudioContext() || !audioBuffer) return;
 
     lastUserInitiatedSource = 'file'; // Track user intent
@@ -156,7 +176,7 @@ function toggleFileAudio(controls) {
 }
 
 // --- Generated Audio Control ---
-function startGeneratedAudio() {
+export function startGeneratedAudio() {
     if (!audioContext || isGeneratedPlaying) return;
     console.log("Starting generated audio with fade-in...");
     const targetAmplitude = parseFloat(amplitudeSlider.value);
@@ -188,7 +208,7 @@ function startGeneratedAudio() {
     startVisualization();
     updateAudioActivityBodyClass(); // ✨ ADDED ✨
 }
-function stopGeneratedAudio() {
+export function stopGeneratedAudio() {
     if (!isGeneratedPlaying) return;
     console.log("Stopping generated audio with fade-out...");
     const fadeTime = 0.015; // 15ms fade
@@ -236,7 +256,7 @@ function stopGeneratedAudio() {
 }
 
 // --- Preview Audio Functions ---
-function startPreviewOscillator() {
+export function startPreviewOscillator() {
     if (!audioContext || isGeneratedPlaying || isPreviewing) return; // Don't start if playing or already previewing
     console.log("Starting oscillator preview...");
     isPreviewing = true;
@@ -260,7 +280,7 @@ function startPreviewOscillator() {
     updateAudioActivityBodyClass(); // ✨ ADDED ✨
 }
 
-function startPreviewNoise() {
+export function startPreviewNoise() {
     if (!audioContext || isGeneratedPlaying || isPreviewing) return; // Don't start if playing or already previewing
     console.log("Starting noise preview...");
     isPreviewing = true;
@@ -279,7 +299,7 @@ function startPreviewNoise() {
     updateAudioActivityBodyClass(); // ✨ ADDED ✨
 }
 
-function stopPreviewAudio(controls) {
+export function stopPreviewAudio(controls) {
     if (!isPreviewing || isGeneratedPlaying) { 
         isPreviewing = false; 
         return; 
@@ -335,7 +355,7 @@ function stopPreviewAudio(controls) {
 }
 
 // --- Noise Control ---
-function createNoiseSource(calledFromStart = false) {
+export function createNoiseSource(calledFromStart = false) {
     if (!audioContext || !noiseGain) return;
     // Stop any existing noise source immediately (no fade needed here)
     if (noiseSource) { 
@@ -372,7 +392,7 @@ function createNoiseSource(calledFromStart = false) {
 
     console.log("Noise source started.");
 }
-function stopNoiseSource() {
+export function stopNoiseSource() {
     // if (noiseSource) { try { noiseSource.stop(); noiseSource.disconnect(); } catch(e){} noiseSource = null; console.log("Noise source stopped."); } // Old immediate stop
     
     if (noiseSource) {
@@ -415,7 +435,7 @@ function stopNoiseSource() {
 }
 
 // --- File Audio Control ---
-function handleFileSelect(event) {
+export function handleFileSelect(event) {
     const file = event.target.files[0];
     // Make sure button state reflects loading (disabled)
     updateButtonState(playPauseFileButton, false, true); 
@@ -442,7 +462,7 @@ function handleFileSelect(event) {
     // Read the file
     fileReader.readAsArrayBuffer(file);
 }
-function handleFileLoad(event) {
+export function handleFileLoad(event) {
     const audioData = event.target.result;
     if (!initializeAudioContext()) { 
         updateButtonState(playPauseFileButton, false, true); 
@@ -474,7 +494,7 @@ function handleFileLoad(event) {
 }
 
 // NEW function to handle ArrayBuffer directly (e.g., from fetch)
-function handleAudioDataLoad(audioData, fileName) {
+export function handleAudioDataLoad(audioData, fileName) {
     if (!initializeAudioContext()) { 
         updateButtonState(playPauseFileButton, false, true); 
         return; 
@@ -516,7 +536,7 @@ function handleAudioDataLoad(audioData, fileName) {
         });
 }
 
-function handleFileError() {
+export function handleFileError() {
     console.error("File read error:", fileReader.error); 
     audioBuffer = null; 
     updateButtonState(playPauseFileButton, false, true);
@@ -526,7 +546,7 @@ function handleFileError() {
         playbackRateSlider.disabled = true;
     }
 }
-function playAudioFile() {
+export function playAudioFile() {
     if (!audioContext || !audioBuffer) return; // Check context and buffer وجود 
     console.log("Starting/Resuming file playback...");
 
@@ -583,7 +603,7 @@ function playAudioFile() {
     updateButtonState(playPauseFileButton, true, !audioBuffer); // Ensure button state is updated
     updateAudioActivityBodyClass(); // ✨ ADDED ✨
 }
-function stopAudioFile() { // This now acts as PAUSE
+export function stopAudioFile() {
     if (!isFilePlaying) return;
     console.log("Pausing file playback manually...");
     // Record context time when pause occurs
@@ -636,7 +656,7 @@ function stopAudioSource(updatePlayState = true) {
  }
 
 // ✨ NEW: Restart Audio File Function ✨
-function restartAudioFile(controls) {
+export function restartAudioFile(controls) {
     if (!audioContext || !audioBuffer) {
         console.log("Cannot restart: No audio buffer or context.");
         return;

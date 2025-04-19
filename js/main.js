@@ -1,10 +1,28 @@
-import { initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile } from './audio.js';
-import { resizeCanvases } from './visualizer.js';
+import { 
+    initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
+    updateAudioActivityBodyClass
+} from './audio.js';
+import { 
+    resizeCanvases, drawSpectrogramAxis, drawInstantaneousWaveformAxis, drawScrollingWaveformAxis
+} from './visualizer.js';
 import { 
     updateSliderValue, setupUIEventListeners, detectAudioFormatSupport, initializeUIValues,
     initializeTheme, setupThemeToggle, updateButtonState,
-    showLoadingOverlay, updateLoadingProgress, hideLoadingOverlay // Import the new functions
+    showLoadingOverlay, updateLoadingProgress, hideLoadingOverlay
 } from './ui.js';
+import { // Import all necessary elements from config.js
+    instantaneousWaveformCanvas, scrollingWaveformCanvas, spectrogramCanvas,
+    spectrogramAxisCanvas, instantaneousWaveformAxisCanvas, scrollingWaveformAxisCanvas,
+    waveformTypeSelect, frequencySlider, frequencyValue, frequencyLogSlider, frequencyLogValue,
+    amplitudeSlider, amplitudeValue, noiseTypeSelect, noiseLevelSlider, noiseLevelValue,
+    windowSizeSelect, scrollSpeedSlider, scrollSpeedValue, colorSchemeSelect,
+    waveformZoomSlider, waveformZoomValueSpan, waveformScaleSlider, waveformScaleValueSpan,
+    scrollingDownsampleSlider, scrollingDownsampleValueSpan, scrollingScaleSlider, scrollingScaleValueSpan,
+    playPauseGeneratedButton, playPauseFileButton, audioFileInput, fileInfoDisplay,
+    browserFormatsSpan, spectrogramScaleSelect, playbackRateSlider, playbackRateValue,
+    waveformWindowSizeSelect, scrollSpeedWaveformSlider, scrollSpeedWaveformValueSpan,
+    linkFftSizeCheckbox, linkToWaveformCheckbox
+} from './config.js';
 
 let isFirstPlay = true; // Flag to track the first playback action
 
@@ -61,26 +79,40 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Call functions with explicit dependencies
-    resizeCanvases(canvasRefs, uiControls);
-    window.addEventListener('resize', () => resizeCanvases(canvasRefs, uiControls));
+    // Capture the returned contexts from the initial resize
+    const initialContexts = resizeCanvases(canvasRefs, uiControls);
+    window.addEventListener('resize', () => resizeCanvases(canvasRefs, uiControls)); // Resize doesn't need return value here
     detectAudioFormatSupport(uiControls.browserFormatsSpan); // Pass specific element
-    setupEventListeners(uiControls); 
+    setupUIEventListeners(uiControls); 
     initializeUIValues(uiControls); 
     initializeTheme(canvasRefs, uiControls); // ✨ Initialize theme, which now calls applyTheme with redraw ✨
     setupThemeToggle(canvasRefs, uiControls); // ✨ Setup listener, passes refs/controls for subsequent toggles ✨
     
     // Explicitly initialize the AudioContext and analysers on load
-    initializeAudioContext(); 
+    // Wrap in setTimeout to defer execution slightly, resolving potential timing issues
+    setTimeout(() => {
+        const localAudioContext = initializeAudioContext(); // Get context directly
 
-    // === NEW: Explicitly Draw Axes After AudioContext is Ready ===
-    // This ensures axes appear on initial load, now that resizeCanvases waits for audioContext.
-    if (audioContext) { // Check if context was successfully created
-        if (spectrogramAxisCtx) drawSpectrogramAxis();
-        if (instantaneousWaveformAxisCtx) drawInstantaneousWaveformAxis(uiControls);
-        if (scrollingWaveformAxisCtx) drawScrollingWaveformAxis(uiControls);
-        console.log("Explicitly drew axes after AudioContext initialization.");
-    }
-    // =============================================================
+        // === NEW: Explicitly Draw Axes After AudioContext is Ready ===
+        // Use the contexts captured from the initial resizeCanvases call
+        if (localAudioContext) { 
+            console.log("Attempting deferred axis draw. Contexts available:", {
+                specA: !!initialContexts.spectrogramAxisCtx,
+                instA: !!initialContexts.instantaneousWaveformAxisCtx,
+                scrollA: !!initialContexts.scrollingWaveformAxisCtx
+            });
+            // Note: Axis drawing functions implicitly use the exported audioContext from audio.js,
+            // but the check here ensures we only call them if initialization succeeded.
+            // Check the captured contexts before drawing
+            if (initialContexts.spectrogramAxisCtx) drawSpectrogramAxis();
+            if (initialContexts.instantaneousWaveformAxisCtx) drawInstantaneousWaveformAxis(uiControls);
+            if (initialContexts.scrollingWaveformAxisCtx) drawScrollingWaveformAxis(uiControls);
+            console.log("Explicitly drew axes after AudioContext initialization (deferred).");
+        } else {
+            console.error("Deferred AudioContext initialization failed, cannot draw axes.");
+        }
+        // =============================================================
+    }, 0); // Delay of 0ms
 
     // === Setup Preloaded Audio Files ===
     const preloadedSelect = document.getElementById('preloaded-audio-select');
@@ -121,8 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Fetching preloaded file: ${filePath}`);
             actualFileInput.value = ''; // Clear local file input
 
-            // --- Start Loading Overlay ---
-            showLoadingOverlay(selectedFile);
+            // --- Start Loading Overlay (with delay) ---
+            let overlayTimeoutId = null;
+            overlayTimeoutId = setTimeout(() => {
+                showLoadingOverlay(selectedFile);
+                overlayTimeoutId = null; // Clear the ID once the timeout has run
+            }, 150); // Delay showing overlay by 150ms
+            // ----------------------------------------
 
             // Use XMLHttpRequest for progress tracking
             const xhr = new XMLHttpRequest();
@@ -139,6 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             xhr.onload = () => {
+                // --- Clear the overlay timeout --- 
+                if (overlayTimeoutId) {
+                    clearTimeout(overlayTimeoutId);
+                    overlayTimeoutId = null;
+                }
+                // ---------------------------------
+
                 if (xhr.status === 200) {
                     const audioData = xhr.response;
                     console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}.`);
@@ -158,6 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             xhr.onerror = () => {
+                // --- Clear the overlay timeout --- 
+                if (overlayTimeoutId) {
+                    clearTimeout(overlayTimeoutId);
+                    overlayTimeoutId = null;
+                }
+                // ---------------------------------
+
                 console.error(`Network error fetching audio file ${selectedFile}`);
                 // Maybe disable play button or show error
                 updateButtonState(uiControls.playPauseFileButton, false, true); 

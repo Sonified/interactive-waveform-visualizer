@@ -235,3 +235,46 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
 *   **Solution:** Changed the `max` attribute of the `#frequency` slider in `Interactive_Waveform_Visualizer.html` from `10000` to `20000`.
 *   **Related:** Updated the JavaScript functions `updateFrequency` and `updateFrequencyLog` in `js/ui.js` to use `Math.log(20000)` instead of `Math.log(10000)` for calculating the logarithmic mapping, ensuring both the linear and log sliders correctly reflect the new range.
 
+## Post-Refactor Debugging Sprint (Import/Export Issues)
+
+*   **Context:** A key motivation for restructuring the codebase was to facilitate adding new features, notably a loading screen with progress indication for downloading potentially large audio files. This led to significant code refactoring into separate modules (`audio.js`, `visualizer.js`, `ui.js`, `config.js`, `main.js`). Following this refactoring, the updated codebase was pushed to GitHub. Upon subsequently loading or pulling this refactored code, a cascade of `ReferenceError` and `SyntaxError` exceptions began appearing. These errors fundamentally stemmed from the new modular structure: dependencies between the modules (functions, variables, etc.) were not correctly declared using `export` in the source module and `import` in the consuming module. The refactoring introduced these dependency requirements, and the push/subsequent load revealed where they were missing.
+*   **Problem Summary:** The core issues revolved around ensuring that all necessary components (functions, DOM element references stored in constants, state variables, analyser nodes, canvas contexts) were correctly shared across the different JavaScript files. This involved meticulously identifying each error, tracing the required component back to its definition file, ensuring it was exported, and adding the corresponding import statement to the file(s) that needed it. Scope issues (using global variable names instead of passed objects) and browser caching occasionally complicated the debugging process.
+*   **Specific Errors Addressed & Fixes:**
+    *   `ReferenceError: setupUIEventListeners has already been declared`: Caused by duplicate function definition in `js/ui.js`; removed duplicate.
+    *   `ReferenceError: audioSource is not defined` (in `updatePlaybackRate` within `js/ui.js`): Imported `audioSource` from `js/audio.js`.
+    *   `ReferenceError: initializeAudioContext is not defined` (in `handleGeneratorSliderInteractionStart` within `js/ui.js`): Imported `initializeAudioContext` from `js/audio.js`.
+    *   `ReferenceError: amplitudeSlider is not defined` (in `startPreviewOscillator` within `js/audio.js`): Imported `amplitudeSlider` from `js/config.js`.
+    *   `ReferenceError: waveformTypeSelect is not defined` (in `startPreviewOscillator` within `js/audio.js`): Imported `waveformTypeSelect` from `js/config.js`.
+    *   `ReferenceError: frequencySlider is not defined` (in `startPreviewOscillator` within `js/audio.js`): Imported `frequencySlider` from `js/config.js`. (Also preemptively added `noiseLevelSlider`, `noiseTypeSelect`).
+    *   `ReferenceError: drawInstantaneousWaveformAxis is not defined` (in `js/ui.js`): Imported from `js/visualizer.js`.
+    *   `ReferenceError: redrawStaticInstantaneousWaveform is not defined` (in `js/ui.js`): Added `export` to function in `js/visualizer.js` and imported into `js/ui.js`.
+    *   `SyntaxError: ...does not provide export named 'redrawStaticInstantaneousWaveform'`: Caused by browser caching an old version of `js/visualizer.js`. Resolved via hard refresh.
+    *   `ReferenceError: waveformAnalyser is not defined` (in `updateWaveformAnalyserSettings` within `js/ui.js`): Imported `waveformAnalyser` from `js/audio.js`.
+    *   `ReferenceError: drawScrollingWaveformAxis is not defined` (in `js/ui.js`): Imported from `js/visualizer.js`.
+    *   `ReferenceError: colorSchemeSelect is not defined` (in `updateColorScheme` within `js/ui.js`): Imported `colorSchemeSelect` from `js/config.js`.
+    *   `ReferenceError: spectrogramCtx is not defined` (in spectrogram scale listener within `js/ui.js`): Imported `spectrogramCtx` from `js/visualizer.js`.
+    *   `SyntaxError: ...does not provide export named 'spectrogramCanvas'`: Incorrectly imported `spectrogramCanvas` from `js/visualizer.js`. Corrected to import from `js/config.js`.
+    *   `ReferenceError: analyser is not defined` (in `updateAnalyserSettings` within `js/ui.js`): Imported `analyser` from `js/audio.js`.
+    *   `ReferenceError: playPauseGeneratedButton is not defined` (in `toggleGeneratedAudio` within `js/audio.js`): Corrected function to use `controls.playPauseGeneratedButton` instead of accessing a global variable.
+    *   `ReferenceError: redrawStaticScrollingWaveformFromImage is not defined` (in `js/ui.js`): Added `export` to function in `js/visualizer.js` and imported into `js/ui.js`.
+    *   `ReferenceError: drawSpectrogramAxis is not defined` (in `js/ui.js`): Imported from `js/visualizer.js`.
+*   **Current Status:** All known `ReferenceError` and `SyntaxError` issues related to module imports/exports appear to be resolved. The application loads without these specific errors.
+
+## Current Issue: Axis Canvases Not Drawing on Load
+
+*   **Problem:** Despite resolving the import/export errors, the axis canvases (`#spectrogram-axis-canvas`, `#instantaneous-waveform-axis-canvas`, `#scrolling-waveform-axis-canvas`) are not displaying their content (ticks, labels) when the page initially loads. The main visualization canvases appear correctly.
+*   **Investigation:**
+    1.  Verified that `js/main.js` calls the respective `draw...Axis` functions within a `setTimeout` callback, after attempting `initializeAudioContext`. This logic appears sound and includes checks for the existence of the `AudioContext` and the relevant axis canvas contexts.
+    2.  Added `console.log` statements within `resizeCanvases` in `js/visualizer.js` to confirm that the axis canvas contexts (`...AxisCtx`) are being obtained.
+    3.  Added `console.log` statements at the beginning of each `draw...Axis` function in `js/visualizer.js` to verify if they are being called by `main.js`.
+*   **Resolution:** This issue is now **RESOLVED**. Subsequent debugging revealed a cascade of JavaScript `ReferenceError` and `SyntaxError` issues (primarily related to missing imports or incorrect variable scopes after the module refactor). Fixing these errors allowed the existing axis drawing logic, which was being called correctly according to logs (`VIS:` logs in `visualizer.js`, explicit call confirmation in `main.js`), to execute successfully on page load.
+*   **Current Status:** All axis canvases (Spectrogram, Instantaneous Waveform, Scrolling Waveform) now correctly draw their initial ticks and labels when the page loads.
+
+## Loading Overlay Flicker Fix
+
+*   **Problem:** When selecting a preloaded audio file that was already cached by the browser (or loaded very quickly), the loading overlay would briefly flash grey on the screen because it was shown immediately and then hidden almost instantly upon load completion.
+*   **Solution:** Modified the `change` event listener for the preloaded file dropdown (`#preloaded-audio-select`) in `js/main.js`.
+    1.  Instead of showing the overlay immediately, `setTimeout` is used to schedule the `showLoadingOverlay` function call after a 150ms delay. The timeout ID is stored.
+    2.  In the `onload` and `onerror` handlers for the `XMLHttpRequest` used to fetch the file, `clearTimeout` is called with the stored ID. This cancels the scheduled showing of the overlay if the file load completes (successfully or with an error) before the 150ms delay has elapsed.
+*   **Result:** The overlay no longer flickers for instantly loaded files but still appears correctly for files that take longer than 150ms to load.
+

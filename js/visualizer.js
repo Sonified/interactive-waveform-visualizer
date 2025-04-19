@@ -1,4 +1,22 @@
+import { 
+    audioContext, 
+    analyser, waveformAnalyser, scrollingAnalyser,
+    isGeneratedPlaying, isFilePlaying, isPreviewing // <-- Add state variables
+} from './audio.js';
+import { // <-- Add import for config constants
+    instantaneousWaveformCanvas, scrollingWaveformCanvas, spectrogramCanvas,
+    spectrogramAxisCanvas, instantaneousWaveformAxisCanvas, scrollingWaveformAxisCanvas,
+    waveformZoomSlider, waveformScaleSlider, scrollingScaleSlider, scrollingDownsampleSlider,
+    scrollSpeedWaveformSlider, scrollSpeedSlider, spectrogramScaleSelect, colorSchemeSelect
+} from './config.js';
+
 // --- Canvas Elements and Contexts ---
+export let instantaneousWaveformCtx = null;
+export let scrollingWaveformCtx = null;
+export let spectrogramCtx = null;
+export let spectrogramAxisCtx = null;
+export let instantaneousWaveformAxisCtx = null;
+export let scrollingWaveformAxisCtx = null;
 
 // Waveform Axis Canvases and Contexts
 
@@ -22,7 +40,7 @@ let spectrogramAnimationId = null;
 let scrollingWaveformAnimationId = null;
 
 // --- Visualization ---
-function startVisualization() {
+export function startVisualization() {
     if (!analyser) return;
     if (!waveformAnimationId) {
         waveformAnimationId = requestAnimationFrame(drawInstantaneousWaveform);
@@ -48,7 +66,7 @@ function startVisualization() {
 }
 
 // Helper function to check state and stop visualization loops if inactive
-function checkAndStopVisualization() {
+export function checkAndStopVisualization() {
     if (!isGeneratedPlaying && !isFilePlaying && !isPreviewing) {
         console.log("All audio inactive, stopping visualization loops.");
         if (waveformAnimationId) {
@@ -415,7 +433,9 @@ function getColor(value) { // Modified to accept byte value 0-255
 }
 
 // Adjusts canvas internal resolution and height based on window size
-function resizeCanvases(canvasRefs, controls) {
+
+// --- Initialization and Resizing ---
+export function resizeCanvases(canvasRefs, controls) {
     const { instWf, scrollWf, spec, specAxis, instWfAxis, scrollWfAxis } = canvasRefs;
     const allCanvases = [instWf, scrollWf, spec, specAxis, instWfAxis, scrollWfAxis];
 
@@ -477,17 +497,19 @@ function resizeCanvases(canvasRefs, controls) {
         // Get context if not already obtained - Assign to GLOBAL context vars
         if (axisCanvas.id === 'spectrogram-axis-canvas' && !spectrogramAxisCtx) {
             spectrogramAxisCtx = axisCanvas.getContext('2d');
+            console.log("VIS: SpectrogramAxisCtx obtained."); // <-- Log context acquisition
         } else if (axisCanvas.id === 'instantaneous-waveform-axis-canvas' && !instantaneousWaveformAxisCtx) {
             instantaneousWaveformAxisCtx = axisCanvas.getContext('2d');
+            console.log("VIS: InstantaneousWaveformAxisCtx obtained."); // <-- Log context acquisition
         } else if (axisCanvas.id === 'scrolling-waveform-axis-canvas' && !scrollingWaveformAxisCtx) {
             scrollingWaveformAxisCtx = axisCanvas.getContext('2d');
+            console.log("VIS: ScrollingWaveformAxisCtx obtained."); // <-- Log context acquisition
         }
     });
 
     // Redraw all axes after resizing and context acquisition
     if (spectrogramAxisCtx && audioContext) drawSpectrogramAxis();
     if (instantaneousWaveformAxisCtx && audioContext) drawInstantaneousWaveformAxis(controls);
-    if (scrollingWaveformAxisCtx && audioContext) drawScrollingWaveformAxis(controls);
 
     // --- Draw initial static zero lines on waveform canvases --- 
     const drawInitialZeroLine = (canvas, ctx) => {
@@ -513,10 +535,21 @@ function resizeCanvases(canvasRefs, controls) {
     drawInitialZeroLine(instantaneousWaveformCanvas, instantaneousWaveformCtx);
     drawInitialZeroLine(scrollingWaveformCanvas, scrollingWaveformCtx);
     // --- End initial zero line drawing ---
+
+    // Return the obtained contexts
+    return {
+        instantaneousWaveformCtx,
+        scrollingWaveformCtx,
+        spectrogramCtx,
+        spectrogramAxisCtx,
+        instantaneousWaveformAxisCtx,
+        scrollingWaveformAxisCtx
+    };
 } 
 
 // --- Function to Draw Spectrogram Frequency Axis ---
-function drawSpectrogramAxis() {
+export function drawSpectrogramAxis() {
+    console.log("VIS: drawSpectrogramAxis called."); // <-- Add log
     if (!spectrogramAxisCtx || !audioContext) {
         console.warn("Spectrogram axis context or audio context not ready.");
         return;
@@ -590,7 +623,7 @@ function drawSpectrogramAxis() {
             debugPositions[freq] = spectrogram_y;
         }
     });
-    console.log("Spectrogram debug positions:", debugPositions);
+    // console.log("Spectrogram debug positions:", debugPositions); // <-- Comment out
 
     // Now draw the actual labels
     const drawnFrequencies = new Set(); // Keep track of drawn labels to avoid duplicates (like 0)
@@ -660,7 +693,8 @@ function drawSpectrogramAxis() {
 } 
 
 // --- Functions to Draw Waveform Amplitude Axes ---
-function drawInstantaneousWaveformAxis(controls) {
+export function drawInstantaneousWaveformAxis(controls) {
+    console.log("VIS: drawInstantaneousWaveformAxis called."); // <-- Add log
     if (!instantaneousWaveformAxisCtx || !controls || !controls.waveformScaleSlider) {
         console.warn("Instantaneous waveform axis context or controls not ready.");
         return;
@@ -764,7 +798,8 @@ function drawInstantaneousWaveformAxis(controls) {
     ctx.stroke();
 }
 
-function drawScrollingWaveformAxis(controls) {
+export function drawScrollingWaveformAxis(controls) {
+    console.log("VIS: drawScrollingWaveformAxis called."); // <-- Add log
     if (!scrollingWaveformAxisCtx || !controls || !controls.scrollingScaleSlider) {
          console.warn("Scrolling waveform axis context or controls not ready.");
          return;
@@ -870,8 +905,11 @@ function drawScrollingWaveformAxis(controls) {
 
 // --- Function to Redraw Static Instantaneous Waveform ---
 // This uses the last captured data array and current control settings
-function redrawStaticInstantaneousWaveform(controls) {
-    if (!instantaneousWaveformCtx) return; // Ensure context exists
+export function redrawStaticInstantaneousWaveform(controls) {
+    if (!lastInstantaneousDataArray || !instantaneousWaveformCtx) {
+        console.warn("Cannot redraw static instantaneous waveform: No data or context.");
+        return;
+    }
 
     // ✨ Theme-aware colors ✨
     const isDarkTheme = document.body.classList.contains('midnight-blue');
@@ -943,7 +981,7 @@ function redrawStaticInstantaneousWaveform(controls) {
 } 
 
 // Improved function that accounts for scale at time of capture
-function redrawStaticScrollingWaveformFromImage(controls) {
+export function redrawStaticScrollingWaveformFromImage(controls) {
     if (!scrollingWaveformCtx || !lastScrollingCanvasImage) {
         console.warn("Cannot redraw static scrolling waveform: context or stored image missing.");
         return;
