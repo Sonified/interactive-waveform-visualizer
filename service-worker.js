@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing!'); // User confirmation log
+// console.log('Confirmed! This is amazing!'); // User confirmation log - REMOVED
 
 const APP_SHELL_CACHE_NAME = 'app-shell-cache-v1';
 const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache name

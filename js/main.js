@@ -1,4 +1,5 @@
-console.log("--- RUNNING LATEST js/main.js (SW VERSION TEST 2) ---");
+console.log('Confirmed! This is amazing! 7:39am'); // User confirmation log
+
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
     updateAudioActivityBodyClass
@@ -55,11 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Service Worker Registration ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // Correct path for GitHub Pages deployment
-            const swPath = '/interactive-waveform-visualizer/service-worker.js'; 
+            // Correct path for root deployment (likely better for local dev too)
+            // const swPath = '/service-worker.js'; // Path relative to server root
+            const swPath = 'service-worker.js'; // Path relative to current directory (should work for sub-paths)
             navigator.serviceWorker.register(swPath) 
                 .then(registration => {
-                    console.log('Service Worker registered with scope:', registration.scope);
+                    console.log('[Service Worker] registered with scope:', registration.scope);
                 })
                 .catch(error => {
                     console.error('Service Worker registration failed:', error);
