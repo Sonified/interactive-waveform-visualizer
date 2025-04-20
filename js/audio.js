@@ -8,7 +8,10 @@ import {
     noiseTypeSelect,
     audioFileInput
 } from './config.js';
-import { updateButtonState, sliderValueToPlaybackRate } from './ui.js';
+import { 
+    updateButtonState, sliderValueToPlaybackRate, 
+    showLoadingOverlay, updateLoadingProgress, hideLoadingOverlay
+} from './ui.js';
 import { startVisualization, checkAndStopVisualization } from './visualizer.js';
 
 // --- Global Audio Variables ---
@@ -486,6 +489,20 @@ export function handleFileSelect(event) {
     stopAudioFile(); // This also clears the buffer implicitly via stopAudioSource
     
     // Read the file
+    fileReader.onerror = handleFileError;
+    
+    // Add progress handler
+    // fileReader.onprogress = updateLoadingProgress; // Incorrect direct assignment
+    fileReader.onprogress = (event) => {
+        if (event.lengthComputable) {
+            // Call the imported function with extracted values
+            updateLoadingProgress(event.loaded, event.total);
+        } else {
+            // Optional: Handle cases where progress isn't computable
+            // console.log('File reading progress not computable.');
+        }
+    };
+
     fileReader.readAsArrayBuffer(file);
 }
 export function handleFileLoad(event) {

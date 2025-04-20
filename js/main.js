@@ -1,3 +1,4 @@
+console.log("--- RUNNING LATEST js/main.js (SW VERSION TEST 2) ---");
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
     updateAudioActivityBodyClass

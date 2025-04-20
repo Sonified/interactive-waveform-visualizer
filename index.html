@@ -1020,6 +1020,16 @@
             font-style: italic;
         }
 
+        /* Loading Overlay Dark Theme Override */
+        html.midnight-blue #loading-overlay {
+            background: linear-gradient(to top right, #050b27, #131d52); /* Match body gradient */
+        }
+        html.midnight-blue .loading-content {
+            background-color: rgba(10, 15, 46, 0.9); /* Dark blue, slightly transparent */
+            /* Text colors should already be light, but we could force them if needed */
+            /* color: #eee; */ 
+        }
+
     </style>
 </head>
 <body>
