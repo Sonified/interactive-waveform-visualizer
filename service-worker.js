@@ -3,10 +3,10 @@ const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache nam
 
 // List of core files constituting the "app shell"
 const appShellFiles = [
-    '/', // Alias for index.html
+    // '/', // Alias for index.html - REMOVED as potentially problematic
     'index.html',
     // 'manifest.json', // Good practice to cache if you have one (we might add later) - REMOVED as likely missing
-    'favicon.ico', 
+    // 'favicon.ico', // REMOVED as requested
     'Images/Waveform_Visualizer_Icon_v2.png',
     // Add main CSS/JS modules
     'js/config.js',
