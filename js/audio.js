@@ -8,7 +8,10 @@ import {
     noiseTypeSelect,
     audioFileInput
 } from './config.js';
-import { updateButtonState, sliderValueToPlaybackRate } from './ui.js';
+import { 
+    updateButtonState, sliderValueToPlaybackRate, 
+    showLoadingOverlay, updateLoadingProgress, hideLoadingOverlay
+} from './ui.js';
 import { startVisualization, checkAndStopVisualization } from './visualizer.js';
 
 // --- Global Audio Variables ---
