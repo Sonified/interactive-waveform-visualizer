@@ -433,12 +433,10 @@ function getColor(value) { // Modified to accept byte value 0-255
 
 // --- Initialization and Resizing ---
 export function resizeCanvases(canvasRefs, controls) {
-    console.log('[resizeCanvases] Function Start.'); // Log Start
     const { instWf, scrollWf, spec, specAxis, instWfAxis, scrollWfAxis } = canvasRefs;
     const allCanvases = [instWf, scrollWf, spec, specAxis, instWfAxis, scrollWfAxis];
 
     // --- ✨ Responsive Height Calculation ✨ ---
-    console.log('[resizeCanvases] Calculating heights...'); // Log Calculation Start
     const defaultWaveformHeight = 200;
     const defaultSpectrogramHeight = 300;
     const minHeightFactor = 0.66; // Clamp at 66%
@@ -446,107 +444,76 @@ export function resizeCanvases(canvasRefs, controls) {
     const controlsApproxHeight = 80;  // Reduced estimates to give canvases more height
     const paddingAndMargins = 40; // Reduced estimates to give canvases more height
     const availableHeight = window.innerHeight - headerApproxHeight - paddingAndMargins;
-    console.log(`[resizeCanvases] Window InnerHeight: ${window.innerHeight}, Available Height: ${availableHeight}`); // Log Available Height
     const targetHeightPerVis = Math.max(10, availableHeight / 3 - controlsApproxHeight); // Rough target height per visualizer row, minimum 10px
     const minWaveformHeight = defaultWaveformHeight * minHeightFactor;
     const minSpectrogramHeight = defaultSpectrogramHeight * minHeightFactor;
     const finalWaveformHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
+    console.log(`[resizeCanvases] finalWaveformHeight = Math.round(Math.max(${minWaveformHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) - 45 = ${finalWaveformHeight}`); // Log Waveform calculation
     const finalSpectrogramHeight = Math.round(Math.max(minSpectrogramHeight, targetHeightPerVis)) + 100; //THIS is how we change the height of the spectrogram
+    console.log(`[resizeCanvases] finalSpectrogramHeight = Math.round(Math.max(${minSpectrogramHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) + 100 = ${finalSpectrogramHeight}`); // Log Spectrogram calculation
     console.log(`[resizeCanvases] Calculated Final Heights - Waveform: ${finalWaveformHeight}, Spectrogram: ${finalSpectrogramHeight}`); // Log Final Calculated Heights
-    // --- End Responsive Height ---
+    // --- End Responsive Height --- 
 
     // ✨ Define padding for axis labels ✨
     const AXIS_VERTICAL_PADDING = 5; // Pixels for top and bottom padding
 
     // Main visualization canvases
-    console.log('[resizeCanvases] Resizing main canvases...'); // Log Main Canvas Resizing Start
     [instWf, scrollWf, spec].forEach(canvas => {
-        if (!canvas || !canvas.parentElement || canvas.parentElement.offsetWidth <= 0) {
-            console.warn(`[resizeCanvases] Skipping canvas ${canvas ? canvas.id : 'undefined'} due to invalid state.`); // Log Skipping Canvas
-            return;
-        }
-
-        const canvasId = canvas.id;
-        console.log(`[resizeCanvases] Before resize - ${canvasId}: style.width=${canvas.style.width}, style.height=${canvas.style.height}, width=${canvas.width}, height=${canvas.height}, parentOffsetWidth=${canvas.parentElement.offsetWidth}`); // Log Before Setting
-
+        if (!canvas || !canvas.parentElement || canvas.parentElement.offsetWidth <= 0) return;
+        
         canvas.width = canvas.parentElement.offsetWidth;
         
         // ✨ Apply calculated height ✨
-        let newHeight;
         if (canvas.id.includes('spectrogram')) {
-            newHeight = finalSpectrogramHeight;
+            canvas.height = finalSpectrogramHeight;
         } else {
-            newHeight = finalWaveformHeight;
+            canvas.height = finalWaveformHeight;
         }
-        canvas.height = newHeight; // Set bitmap height
-        canvas.style.height = `${newHeight}px`; // Set display height via CSS
-
-        console.log(`[resizeCanvases] After resize - ${canvasId}: style.width=${canvas.style.width}, style.height=${canvas.style.height}, width=${canvas.width}, height=${canvas.height}`); // Log After Setting
             
         // Get main contexts if not already obtained - Assign to GLOBAL vars
         if (canvas.id === 'instantaneous-waveform-canvas' && !instantaneousWaveformCtx) {
             instantaneousWaveformCtx = canvas.getContext('2d');
-            console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Context Obtain
         } else if (canvas.id === 'scrolling-waveform-canvas' && !scrollingWaveformCtx) {
             scrollingWaveformCtx = canvas.getContext('2d', { willReadFrequently: true }); // Keep optimization
-            console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Context Obtain
         } else if (canvas.id === 'spectrogram-canvas' && !spectrogramCtx) {
             spectrogramCtx = canvas.getContext('2d', { willReadFrequently: true }); // Keep optimization
-            console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Context Obtain
         }
     });
     // Comment out the resize log
     // console.log(`Resized main canvases`);
 
     // Axis canvases - Resize and get context if not already done
-    console.log('[resizeCanvases] Resizing axis canvases...'); // Log Axis Canvas Resizing Start
     [specAxis, instWfAxis, scrollWfAxis].forEach(axisCanvas => {
-        if (!axisCanvas || !axisCanvas.parentElement || axisCanvas.parentElement.offsetWidth <= 0) {
-             console.warn(`[resizeCanvases] Skipping axis canvas ${axisCanvas ? axisCanvas.id : 'undefined'} due to invalid state.`); // Log Skipping Axis Canvas
-            return;
-        }
+        if (!axisCanvas || !axisCanvas.parentElement || axisCanvas.parentElement.offsetWidth <= 0) return;
         
-        const canvasId = axisCanvas.id;
-        console.log(`[resizeCanvases] Before resize - ${canvasId}: style.width=${axisCanvas.style.width}, style.height=${axisCanvas.style.height}, width=${axisCanvas.width}, height=${axisCanvas.height}, parentOffsetWidth=${axisCanvas.parentElement.offsetWidth}`); // Log Before Setting Axis
-
         axisCanvas.width = axisCanvas.parentElement.offsetWidth;
 
         // ✨ Apply calculated height, adding padding for spectrogram axis ✨
-        let newAxisHeight;
         if (axisCanvas.id.includes('spectrogram')) {
-            newAxisHeight = finalSpectrogramHeight + 2 * AXIS_VERTICAL_PADDING; // Add padding
+            axisCanvas.height = finalSpectrogramHeight + 2 * AXIS_VERTICAL_PADDING; // Add padding
         } else {
-            newAxisHeight = finalWaveformHeight; // Keep waveform axes same height
+            axisCanvas.height = finalWaveformHeight; // Keep waveform axes same height
         }
-        axisCanvas.height = newAxisHeight; // Set bitmap height
-        axisCanvas.style.height = `${newAxisHeight}px`; // Set display height via CSS
-
-        console.log(`[resizeCanvases] After resize - ${canvasId}: style.width=${axisCanvas.style.width}, style.height=${axisCanvas.style.height}, width=${axisCanvas.width}, height=${axisCanvas.height}`); // Log After Setting Axis
 
         // Get context if not already obtained - Assign to GLOBAL context vars
         if (axisCanvas.id === 'spectrogram-axis-canvas' && !spectrogramAxisCtx) {
             spectrogramAxisCtx = axisCanvas.getContext('2d');
-            console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Axis Context Obtain
-            // console.log("VIS: SpectrogramAxisCtx obtained.");
+            // console.log("VIS: SpectrogramAxisCtx obtained."); 
         } else if (axisCanvas.id === 'instantaneous-waveform-axis-canvas' && !instantaneousWaveformAxisCtx) {
             instantaneousWaveformAxisCtx = axisCanvas.getContext('2d');
-            console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Axis Context Obtain
             // console.log("VIS: InstantaneousWaveformAxisCtx obtained.");
         } else if (axisCanvas.id === 'scrolling-waveform-axis-canvas' && !scrollingWaveformAxisCtx) {
             scrollingWaveformAxisCtx = axisCanvas.getContext('2d');
-             console.log(`[resizeCanvases] Obtained context for ${canvasId}`); // Log Axis Context Obtain
             // console.log("VIS: ScrollingWaveformAxisCtx obtained.");
         }
     });
 
     // Redraw all axes after resizing and context acquisition
-    console.log('[resizeCanvases] Triggering axis redraws...'); // Log Axis Redraw Trigger
     if (spectrogramAxisCtx && audioContext) drawSpectrogramAxis();
     if (instantaneousWaveformAxisCtx && audioContext) drawInstantaneousWaveformAxis(controls);
     if (scrollingWaveformAxisCtx && audioContext) drawScrollingWaveformAxis(controls);
 
-    // --- Draw initial static zero lines on waveform canvases ---
-    console.log('[resizeCanvases] Drawing initial zero lines...'); // Log Zero Line Draw
+    // --- Draw initial static zero lines on waveform canvases --- 
     const drawInitialZeroLine = (canvas, ctx) => {
         if (!ctx || !canvas) return;
         const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
@@ -572,7 +539,6 @@ export function resizeCanvases(canvasRefs, controls) {
     // --- End initial zero line drawing ---
 
     // Return the obtained contexts
-    console.log('[resizeCanvases] Function End.'); // Log End
     return {
         instantaneousWaveformCtx,
         scrollingWaveformCtx,
