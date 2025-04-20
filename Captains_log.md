@@ -319,3 +319,10 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
     6.  **Fix 2:** Modified `updateAnalyserSettings` again to use the directly imported `spectrogramCtx` (from `visualizer.js`) and `spectrogramCanvas` (from `config.js`).
 *   **Result:** Changing the FFT Size and Window Size dropdowns now correctly updates the respective `AnalyserNode` instances, and the active visualizations (`drawSpectrogram`, `drawInstantaneousWaveform`) visually reflect these changes in real-time during playback.
 
+## Disable Page Scrolling for Desktop App Feel
+
+*   **Requirement:** Prevent the entire page from scrolling using trackpad gestures (or other means) to make the application feel more like a static desktop app.
+*   **Goal:** Allow future implementation of custom scroll/zoom behaviors *within* specific visualizer elements (like canvases) by handling `wheel` events directly, without the main page interfering.
+*   **Implementation:** Added `overflow: hidden;`, `height: 100%;`, `width: 100%;`, and `padding: 0;` to the `html, body` CSS rule in `index.html`.
+*   **Result:** Default browser scrolling for the main page is now disabled.
+
