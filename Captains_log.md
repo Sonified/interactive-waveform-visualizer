@@ -327,3 +327,15 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
 *   **Layout Refinement:** Adding `overflow: hidden` caused right-side content to hang off the page due to body padding. Added `* { box-sizing: border-box; }` CSS rule to ensure padding is included within element widths, resolving the layout issue.
 *   **Result:** Default browser scrolling for the main page is now disabled, and the overall layout respects the viewport boundaries.
 
+## Future Input/Playback Exploration (`audio-player.html`)
+
+*   **Context:** Separate concept files were created based on explorations with Claude, demonstrating alternative file loading and playback mechanisms. These are located in the `Concepts/` folder.
+    *   `Concepts/audio-player.html`: Focuses on a drag-and-drop approach without buttons.
+    *   `Concepts/audio-player-with-button.html`: Includes browser detection (`showDirectoryPicker` vs `webkitdirectory`) to provide different button-based folder selection methods for Chromium vs. other browsers, in addition to drag-and-drop.
+*   **Reference Only:** For now, these files serve only as a reference and concept for future consideration. They are not currently integrated.
+*   **Potential Features to Revisit:**
+    *   **Drag-and-Drop Folder:** Implementing a robust drag-and-drop interface for entire folders remains a desired feature (example in both concept files).
+    *   **Browser-Specific Buttons:** Offering different button interactions based on browser capabilities (example in `audio-player-with-button.html`).
+    *   **Simple File Upload:** Exploring a standard "Upload Files" button approach as an alternative or supplement.
+    *   **Playlist/Playback System:** The playlist generation and audio playback logic within the concept files might be adaptable for the main visualizer in the future.
+
