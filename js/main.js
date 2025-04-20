@@ -70,34 +70,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
     
+    // Set initial text (no animation needed now)
+    if (initTextElement) {
+        initTextElement.textContent = "Interactive Waveform Visualizer"; 
+    }
+
     // Check if a Service Worker is controlling the page
     if (navigator.serviceWorker.controller) {
         // CACHED LOAD: SW is active, fade out immediately
         console.log('[DOMContentLoaded] Active SW controller. Fading out overlay immediately.');
         if (initOverlay) {
+            console.log('[DOMContentLoaded] Found overlay. Adding fade-out/animate classes NOW.');
             initOverlay.classList.add('fade-out');
+            if (initTextElement) initTextElement.classList.add('animate-to-header'); // Add text animation class
             // Set display: none after fade completes
             setTimeout(() => {
-                 if (initOverlay) { // Check again inside timeout
+                 if (initOverlay) { 
                     initOverlay.style.display = 'none';
                     initOverlay.classList.remove('fade-out');
+                    if (initTextElement) initTextElement.classList.remove('animate-to-header'); // Remove text animation class
                  }
             }, 500); // Matches CSS transition duration
         }
     } else {
-        // FIRST LOAD: No SW controller, start animation
-        console.log('[DOMContentLoaded] No active SW controller. Starting initializing animation.');
-        if (initOverlay && initTextElement) { 
-            let dotCount = 0; 
-            const baseText = "Initializing Visualizer";
-            if (initializingIntervalId) clearInterval(initializingIntervalId); 
-            initializingIntervalId = setInterval(() => {
-                initTextElement.textContent = baseText + ".".repeat(dotCount);
-                dotCount = (dotCount + 1) % 4; 
-            }, 300); 
-        } else {
-            console.warn('[DOMContentLoaded] Could not find overlay elements for first load animation.');
-        }
+        // FIRST LOAD: No SW controller (overlay shown by CSS)
+        console.log('[DOMContentLoaded] No active SW controller. Overlay shown by CSS.');
+        // REMOVED: Dot animation setInterval logic
     }
     // ========================================================
 
@@ -180,27 +178,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // === Trigger Delayed Hide (Only if Overlay wasn't hidden immediately) ===
-        // This logic now primarily runs on the *first load* path
-        if (initializingIntervalId) { // Check if interval was started (i.e., first load path)
+        // Clear any lingering interval (shouldn't be one, but safe)
+        if (initializingIntervalId) {
             clearInterval(initializingIntervalId);
             initializingIntervalId = null;
-            console.log('[setTimeout Callback] Stopped initializing animation.');
         }
         
         const overlayToHide = document.getElementById('initializing-overlay'); 
-        // Check if overlay is still visible (it might have been hidden by the immediate fade)
+        const textToAnimate = document.getElementById('initializing-text');
+        // Check if overlay is still visible 
         if (overlayToHide && overlayToHide.style.display !== 'none') { 
             console.log('[setTimeout Callback] Starting *delayed* overlay fade-out sequence.');
             // Wait 500ms before starting fade
             setTimeout(() => {
-                console.log('[Overlay Delayed Fade] Adding fade-out class.');
+                console.log('[Overlay Delayed Fade] Adding fade-out/animate classes.');
                 overlayToHide.classList.add('fade-out'); 
+                if (textToAnimate) textToAnimate.classList.add('animate-to-header'); // Add text animation class
                 
                 // Wait for fade transition (500ms) before hiding
                 setTimeout(() => {
-                    console.log('[Overlay Delayed Fade] Setting display: none and removing class.');
+                    console.log('[Overlay Delayed Fade] Setting display: none and removing classes.');
                     overlayToHide.style.display = 'none';
-                    overlayToHide.classList.remove('fade-out'); // Cleanup
+                    overlayToHide.classList.remove('fade-out'); 
+                    if (textToAnimate) textToAnimate.classList.remove('animate-to-header'); // Remove text animation class
                 }, 500); // Matches CSS transition duration
 
             }, 500); // Initial delay before fade starts
