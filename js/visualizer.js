@@ -447,8 +447,13 @@ export function resizeCanvases(canvasRefs, controls) {
     const targetHeightPerVis = Math.max(10, availableHeight / 3 - controlsApproxHeight); // Rough target height per visualizer row, minimum 10px
     const minWaveformHeight = defaultWaveformHeight * minHeightFactor;
     const minSpectrogramHeight = defaultSpectrogramHeight * minHeightFactor;
-    const finalWaveformHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
-    console.log(`[resizeCanvases] finalWaveformHeight = Math.round(Math.max(${minWaveformHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) - 45 = ${finalWaveformHeight}`); // Log Waveform calculation
+    
+    // Calculate base responsive height, including adjustment
+    const calculatedHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
+    // NOW enforce the 200px minimum
+    const finalWaveformHeight = Math.max(160, calculatedHeight); // Enforce 200px minimum
+    console.log(`[resizeCanvases] finalWaveformHeight = Math.max(200, ${calculatedHeight}) = ${finalWaveformHeight}`); // Updated Log (200)
+
     const finalSpectrogramHeight = Math.round(Math.max(minSpectrogramHeight, targetHeightPerVis)) + 100; //THIS is how we change the height of the spectrogram
     console.log(`[resizeCanvases] finalSpectrogramHeight = Math.round(Math.max(${minSpectrogramHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) + 100 = ${finalSpectrogramHeight}`); // Log Spectrogram calculation
     console.log(`[resizeCanvases] Calculated Final Heights - Waveform: ${finalWaveformHeight}, Spectrogram: ${finalSpectrogramHeight}`); // Log Final Calculated Heights

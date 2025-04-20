@@ -397,3 +397,23 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
         *   `release`: 0.100 s (100 ms) - *Increased from 50ms to reduce audible pumping.*
 *   **Result:** The limiter prevents the final output signal from exceeding -2 dBFS, avoiding harsh digital clipping and replacing it with less noticeable limiting/compression when signals are very loud. The increased release time provides a smoother response.
 
+## Service Worker Reintegration & Merge Conflict Resolution (temp-sw-fixes)
+
+*   **Goal:** Reintroduce and fix the Service Worker functionality, which had been previously removed on the `main` branch during unrelated refactoring, while incorporating other updates (like audio caching) from the `audio-cache-test` branch.
+*   **Branch Strategy:**
+    1.  Merged `audio-cache-test` into `main` to bring in general caching improvements.
+    2.  Created a temporary branch `temp-sw-fixes` off `main` to specifically address the Service Worker.
+    3.  In `temp-sw-fixes`, the `service-worker.js` file (which had been deleted on `main`) was reintroduced and modified (e.g., for audio caching priorities).
+*   **Merge Conflict:** When merging `temp-sw-fixes` back into `main`, a conflict arose for `service-worker.js`:
+    *   `main` (HEAD): File deleted.
+    *   `temp-sw-fixes`: File modified.
+*   **Resolution:** The conflict was resolved by choosing the version from `temp-sw-fixes` (`git add service-worker.js`), effectively overriding the deletion on `main` and keeping the necessary Service Worker file.
+*   **Outcome:** `temp-sw-fixes` was successfully merged into `main`, incorporating the restored and updated `service-worker.js`.
+
+Note: When using align-items: stretch for vertical alignment in a flex row, the effective min-height of the entire row is determined by the tallest minimum height among its children (considering both explicit CSS min-height and the natural height of the content within those children). To guarantee a specific minimum height for all items with stretch, you must ensure every item can naturally achieve or exceed that height, either through its own min-height or its content.
+
+Existing bugs: 
+1. Height calculations are wonky. Can't get main spectrogram to shrink any farther.
+2. Caching the code is a bit weird for development, leading to issues of wrong file loading at times, though it can be helped by having Application -> service workers -> update on reload and Network -> disable cache and clearing the cache under applications storage. I'm not sure what of that is really necessary though.
+3. File loading bar and loading numbers still do not show.
+4. The load color for midnight blue background should match the blue gradient, I can't figure out how to override solid black

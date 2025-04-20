@@ -322,7 +322,7 @@
             display: flex;
             margin-bottom: 20px; /* Space between visualization sections */
             gap: 20px; /* Space between canvas and controls */
-            align-items: stretch; /* CHANGED: Make children stretch vertically */
+            /* align-items: stretch; */ /* <<< REMOVED: Allow children to have independent heights */
             /* Remove border and padding from container, panel handles it */
             /* border-bottom: 1px solid #eee; */ 
             /* padding-bottom: 20px; */ 
@@ -358,6 +358,7 @@
             min-width: 0; /* Prevent flex item overflow */
             display: flex; /* Use flex for canvas + axis */
             gap: 0; /* No gap between canvas and axis */
+            min-height: 200px; /* <<< ADDED: Ensure minimum height for the canvas container */
         }
         .canvas-container h3 {
             margin-bottom: 10px;
