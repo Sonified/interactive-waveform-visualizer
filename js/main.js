@@ -1,4 +1,5 @@
-console.log("--- RUNNING LATEST js/main.js (SW VERSION TEST 2) ---");
+console.log('Confirmed! This is amazing! 7:39am'); // User confirmation log
+
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
     updateAudioActivityBodyClass
@@ -43,7 +44,7 @@ let instantaneousWaveformAxisCtx = null;
 let scrollingWaveformAxisCtx = null;
 
 // Define cache name globally or within the scope where needed
-const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Define cache name
+// const AUDIO_CACHE_NAME = 'audio-cache-v1'; // REMOVED - Handled by SW
 
 // --- REMOVE Function to precache audio files ---
 /* 
@@ -52,12 +53,12 @@ async function precacheAudioFiles() { ... function content removed ... }
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // --- REMOVED: Service Worker Registration Block ---
-    /*
+    // --- Service Worker Registration ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             // Correct path for root deployment (likely better for local dev too)
-            const swPath = '/service-worker.js'; 
+            // const swPath = '/service-worker.js'; // Path relative to server root
+            const swPath = 'service-worker.js'; // Path relative to current directory (should work for sub-paths)
             navigator.serviceWorker.register(swPath) 
                 .then(registration => {
                     console.log('[Service Worker] registered with scope:', registration.scope);
@@ -67,8 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         });
     }
-    */
-    // --- End REMOVED: Service Worker Registration Block ---
+    // --- End Service Worker Registration ---
     
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             preloadedSelect.innerHTML = '<option value="">Error loading files</option>';
         });
 
-    preloadedSelect.addEventListener('change', async () => { 
+    preloadedSelect.addEventListener('change', async () => { // Keep async for fetch below
         const selectedFile = preloadedSelect.value;
 
         if (selectedFile) {
@@ -224,9 +224,10 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAudioFile();
 
             const filePath = `Audio_Files/${selectedFile}`;
-            // console.log(`Requesting preloaded file: ${filePath}`); // Simplified log
+            console.log(`Requesting preloaded file via fetch (SW should intercept): ${filePath}`);
             actualFileInput.value = ''; 
 
+            // Use the *existing* audio loading overlay for file fetching
             let overlayTimeoutId = null;
             const showOverlayWithDelay = () => {
                 if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
@@ -243,53 +244,46 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             try {
-                // --- Check Cache First ---
-                console.log(`[Preload Select] Checking cache for: ${filePath}`);
-                const audioCache = await caches.open(AUDIO_CACHE_NAME);
-                const cachedResponse = await audioCache.match(filePath);
+                // --- REMOVE Cache Check --- 
+                /* 
+                const cache = await caches.open(AUDIO_CACHE_NAME);
+                const cachedResponse = await cache.match(filePath);
+                if (cachedResponse) { ... removed ... } 
+                */
+                // --- End Cache Check ---
+                
+                // --- Fetch (will be intercepted by SW) --- 
+                console.log(`Fetching ${selectedFile} (Service Worker will handle cache)...`);
+                showOverlayWithDelay(); 
 
-                if (cachedResponse) {
-                    console.log(`[Preload Select] Cache hit! Loading ${selectedFile} from cache.`);
-                    const audioData = await cachedResponse.arrayBuffer();
-                    handleAudioDataLoad(audioData, selectedFile);
-                    // Update button text (if needed, might be redundant if already loaded)
-                    const chooseFileButton = document.getElementById('choose-local-file-button');
-                    if (chooseFileButton) {
-                        chooseFileButton.textContent = 'Load File'; 
-                    }
-                } else {
-                    // --- Fetch if not in cache (Fallback) ---
-                    console.log(`[Preload Select] Cache miss. Fetching ${selectedFile} from network...`);
-                    showOverlayWithDelay(); 
+                const response = await fetch(filePath); // SW intercepts here
 
-                    const response = await fetch(filePath); 
+                clearOverlayTimeout();
 
-                    clearOverlayTimeout();
-
-                    if (!response.ok) {
-                        throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
-                    }
-
-                    // --- Cache the fetched response (Fallback) ---
-                    const responseToCache = response.clone();
-                    await audioCache.put(filePath, responseToCache);
-                    console.log(`[Preload Select] Successfully fetched and cached ${selectedFile} (fallback).`);
-                    // -------------------------------------------
-
-                    const audioData = await response.arrayBuffer(); 
-                    console.log(`[Preload Select] Fetched ${selectedFile} from network, size: ${audioData.byteLength}.`);
-                    handleAudioDataLoad(audioData, selectedFile);
-
-                    // Update button text
-                    const chooseFileButton = document.getElementById('choose-local-file-button');
-                    if (chooseFileButton) {
-                        chooseFileButton.textContent = 'Load File'; 
-                    }
+                if (!response.ok) {
+                    // If SW returns fallback or network fails, this will trigger
+                    throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
                 }
+
+                // --- REMOVE Cache Put --- 
+                /*
+                const responseToCache = response.clone(); 
+                await cache.put(filePath, responseToCache);
+                console.log(`Successfully fetched and cached ${selectedFile}.`);
+                */
+                // ----------------------------------
+
+                const audioData = await response.arrayBuffer(); 
+                console.log(`Fetched ${selectedFile} (via SW/Network), size: ${audioData.byteLength}.`);
+                handleAudioDataLoad(audioData, selectedFile);
+
+                const chooseFileButton = document.getElementById('choose-local-file-button');
+                if (chooseFileButton) {
+                    chooseFileButton.textContent = 'Load File'; 
+                }
+
             } catch (error) {
-                console.error(`[Preload Select] Error loading file ${selectedFile}:`, error);
-                 clearOverlayTimeout(); // Ensure timeout is cleared on error
-                 hideLoadingOverlay(); // Hide overlay on error
+                console.error(`Error loading preloaded file ${selectedFile}:`, error);
                 updateButtonState(uiControls.playPauseFileButton, false, true); 
                  const infoDisplay = document.getElementById('file-info-display');
                  if (infoDisplay) {
@@ -300,10 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
                      playbackRateSlider.disabled = true;
                  }
             } finally {
-                 // This finally block might hide the overlay too soon if fetch succeeded 
-                 // Let hideLoadingOverlay be handled within the try/catch blocks where needed
-                 // clearOverlayTimeout(); 
-                 // hideLoadingOverlay(); 
+                 clearOverlayTimeout(); 
+                 hideLoadingOverlay(); 
             }
         } else {
             // Handle case where "-- Select a file --" is chosen
@@ -352,56 +344,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // === REMOVE Call to precacheAudioFiles ===
     // precacheAudioFiles(); 
     // ========================================
-
-    // === Function to Cache Preloaded Audio Files ===
-    async function cachePreloadedAudio() {
-        console.log('[Main Script] Starting preloaded audio caching...');
-        try {
-            console.log('[Main Script] Fetching audio_files.json...');
-            const response = await fetch('audio_files.json');
-            if (!response.ok) {
-                throw new Error(`HTTP error fetching audio_files.json! status: ${response.status}`);
-            }
-            const audioFilesList = await response.json();
-            console.log(`[Main Script] Found ${audioFilesList.length} audio files listed.`);
-
-            const audioCache = await caches.open(AUDIO_CACHE_NAME);
-            console.log(`[Main Script] Opened audio cache: ${AUDIO_CACHE_NAME}`);
-
-            let newlyCachedCount = 0;
-            const cachePromises = audioFilesList.map(async (filename) => {
-                const filePath = `Audio_Files/${filename}`;
-                try {
-                    const cachedResponse = await audioCache.match(filePath);
-                    if (!cachedResponse) {
-                        console.log(`[Main Script] Caching audio: ${filename}`);
-                        const networkResponse = await fetch(filePath);
-                        if (networkResponse.ok) {
-                            await audioCache.put(filePath, networkResponse.clone()); // Clone response for caching
-                            newlyCachedCount++;
-                            console.log(`[Main Script] Successfully cached: ${filename}`);
-                        } else {
-                            console.warn(`[Main Script] Failed to fetch ${filename} for caching, status: ${networkResponse.status}`);
-                        }
-                    } else {
-                        // console.log(`[Main Script] Audio already cached: ${filename}`); // Optional: Log if needed
-                    }
-                } catch (err) {
-                    console.error(`[Main Script] Error caching file ${filename}:`, err);
-                }
-            });
-
-            await Promise.all(cachePromises);
-            console.log(`[Main Script] Finished audio caching check. Newly cached: ${newlyCachedCount}`);
-
-        } catch (error) {
-            console.error('[Main Script] Audio precaching failed:', error);
-        }
-    }
-    // ==============================================
-
-    // === Call the Caching Function ===
-    // Call it after other setup, but let it run async
-    cachePreloadedAudio();
-    // =================================
 }); 

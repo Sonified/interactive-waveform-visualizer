@@ -1,3 +1,5 @@
+// console.log('Confirmed! This is amazing!'); // User confirmation log - REMOVED
+
 const APP_SHELL_CACHE_NAME = 'app-shell-cache-v1';
 const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache name
 
@@ -22,6 +24,7 @@ const appShellFiles = [
 self.addEventListener('install', event => {
     console.log('[Service Worker] Install event triggered');
     event.waitUntil((async () => {
+        // --- UNCOMMENTING: Pre-cache Audio Files ---
         try {
             // --- PRIORITY: Cache Audio Files ---
             console.log('[Service Worker] Fetching audio file list for caching (Priority)...');
@@ -65,37 +68,19 @@ self.addEventListener('install', event => {
             }
             console.log(`[Service Worker] Finished attempting to cache audio files. Newly cached: ${audioCachedCount}`);
             // --- END: Cache Audio Files ---
-
-            // --- Cache App Shell (Second) ---
-            console.log('[Service Worker] Caching App Shell individually (Second)...');
-            let shellCachedCount = 0;
-            let shellFailedCount = 0;
-            try {
-                const appCache = await caches.open(APP_SHELL_CACHE_NAME);
-                for (const file of appShellFiles) {
-                    try {
-                        // console.log(`[Service Worker] Attempting to cache app shell: ${file}`); // Keep commented for less noise
-                        await appCache.add(file); // Try to cache one file
-                        shellCachedCount++;
-                    } catch (err) {
-                        console.warn(`[Service Worker] Failed to cache app shell file: ${file}`, err);
-                        shellFailedCount++;
-                    }
-                }
-            } catch (appCacheError) {
-                 console.error('[Service Worker] Failed to open app shell cache:', appCacheError);
-                 // If opening cache fails, we can't cache anything else here.
-            }
-            console.log(`[Service Worker] App Shell caching attempt complete. Cached: ${shellCachedCount}, Failed: ${shellFailedCount}`);
-            // --- END: Cache App Shell ---
-
-            console.log('[Service Worker] Installation sequence complete.');
-            // Force the waiting service worker to become the active service worker.
-             self.skipWaiting();
-
         } catch (error) {
-            console.error('[Service Worker] Major installation error:', error); // Catch errors outside the specific caching blocks
+            console.error('[Service Worker] Major installation error during audio pre-cache attempt:', error);
         }
+        // */
+        // --- END UNCOMMENTING: Pre-cache Audio Files ---
+
+        /* --- COMMENTED OUT: Cache App Shell (Second) ---
+        // ... (App shell caching code remains commented out) ...
+        --- END COMMENTED OUT: Cache App Shell --- */
+
+        console.log('[Service Worker] Installation sequence complete (App Shell caching skipped).');
+        // Force the waiting service worker to become the active service worker.
+         self.skipWaiting();
     })());
 });
 
