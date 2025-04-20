@@ -417,3 +417,7 @@ Existing bugs:
 2. Caching the code is a bit weird for development, leading to issues of wrong file loading at times, though it can be helped by having Application -> service workers -> update on reload and Network -> disable cache and clearing the cache under applications storage. I'm not sure what of that is really necessary though.
 3. File loading bar and loading numbers still do not show.
 4. The load color for midnight blue background should match the blue gradient, I can't figure out how to override solid black
+
+We'll also explore multi-threading in teh future, see multi-threading.md in the concepts folder.
+
+Start a new captains log that distills this one down! 
