@@ -25,6 +25,7 @@ import { // Import all necessary elements from config.js
 } from './config.js';
 
 let isFirstPlay = true; // Flag to track the first playback action
+let initializingIntervalId = null; // Variable to store the interval ID
 
 // --- Add necessary DOM references globally ---
 // REMOVE these lines as they are declared in config.js
@@ -41,57 +42,44 @@ let instantaneousWaveformAxisCtx = null;
 let scrollingWaveformAxisCtx = null;
 
 // Define cache name globally or within the scope where needed
-const AUDIO_CACHE_NAME = 'audio-cache-v1';
+// const AUDIO_CACHE_NAME = 'audio-cache-v1'; // REMOVED - Handled by SW
 
-// --- Function to precache audio files ---
-async function precacheAudioFiles() {
-    console.log("Starting audio file precaching...");
-    try {
-        const response = await fetch('audio_files.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error loading audio_files.json! status: ${response.status}`);
-        }
-        const audioFilesList = await response.json();
-        console.log(`Found ${audioFilesList.length} files to potentially precache.`);
-
-        const cache = await caches.open(AUDIO_CACHE_NAME);
-        console.log(`Cache '${AUDIO_CACHE_NAME}' opened.`);
-
-        let cachedCount = 0;
-        let skippedCount = 0;
-
-        for (const filename of audioFilesList) {
-            const filePath = `Audio_Files/${filename}`;
-            try {
-                const cachedResponse = await cache.match(filePath);
-                if (cachedResponse) {
-                    // console.log(`Skipping ${filename}, already in cache.`);
-                    skippedCount++;
-                } else {
-                    console.log(`Caching ${filename}...`);
-                    // Fetch and cache
-                    const networkResponse = await fetch(filePath);
-                    if (networkResponse.ok) {
-                        await cache.put(filePath, networkResponse); // Store the original response
-                        console.log(`Successfully cached ${filename}.`);
-                        cachedCount++;
-                    } else {
-                        console.warn(`Failed to fetch ${filename} for caching, status: ${networkResponse.status}`);
-                    }
-                }
-            } catch (err) {
-                console.error(`Error during caching process for ${filename}:`, err);
-            }
-        }
-        console.log(`Pre-caching finished. Cached: ${cachedCount}, Skipped (already cached): ${skippedCount}`);
-
-    } catch (error) {
-        console.error('Error during audio precaching process:', error);
-    }
-}
+// --- REMOVE Function to precache audio files ---
+/* 
+async function precacheAudioFiles() { ... function content removed ... } 
+*/
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch(error => {
+                    console.error('Service Worker registration failed:', error);
+                });
+        });
+    }
+    // --- End Service Worker Registration ---
+    
+    // === Show Initializing Overlay & Start Animation ===
+    const initOverlay = document.getElementById('initializing-overlay');
+    const initTextElement = document.getElementById('initializing-text');
+    if (initOverlay && initTextElement) {
+        console.log('[DOMContentLoaded] Showing initializing overlay.');
+        initOverlay.style.display = 'flex'; 
+        let dotCount = 0; // Start with 0 dots
+        const baseText = "Initializing Visualizer";
+        initializingIntervalId = setInterval(() => {
+            initTextElement.textContent = baseText + ".".repeat(dotCount);
+            dotCount = (dotCount + 1) % 4; // Cycle 0, 1, 2, 3
+        }, 300); // Update every 300ms (faster)
+    }
+    // ================================
+
     // Define objects containing references from config.js
     const canvasRefs = {
         instWf: instantaneousWaveformCanvas,
@@ -129,56 +117,60 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Call functions with explicit dependencies
-    // Capture the returned contexts from the initial resize
-    console.log("[DOMContentLoaded] Initial resizeCanvases call..."); // Log Initial Resize Call
+    console.log("[DOMContentLoaded] Initial resizeCanvases call...");
     const initialContexts = resizeCanvases(canvasRefs, uiControls);
-    console.log("[DOMContentLoaded] Adding window resize listener..."); // Log Adding Resize Listener
+    console.log("[DOMContentLoaded] Adding window resize listener...");
     window.addEventListener('resize', () => {
-        console.log("[Window Resize Event] Triggering resizeCanvases..."); // Log Resize Event Trigger
+        // console.log("[Window Resize Event] Triggering resizeCanvases..."); // Keep commented for less noise
         resizeCanvases(canvasRefs, uiControls);
-    }); // Resize doesn't need return value here
-    detectAudioFormatSupport(uiControls.browserFormatsSpan); // Pass specific element
-    setupUIEventListeners(uiControls); 
-    initializeUIValues(uiControls); 
-    initializeTheme(canvasRefs, uiControls); // ✨ Initialize theme, which now calls applyTheme with redraw ✨
-    setupThemeToggle(canvasRefs, uiControls); // ✨ Setup listener, passes refs/controls for subsequent toggles ✨
-    
-    // Explicitly initialize the AudioContext and analysers on load
-    // Wrap in setTimeout to defer execution slightly, resolving potential timing issues
-    console.log("[DOMContentLoaded] Setting timeout for AudioContext initialization and axis draw..."); // Log Setting Timeout
-    setTimeout(() => {
-        console.log("[setTimeout Callback] Initializing AudioContext..."); // Log Timeout Callback Start
-        const localAudioContext = initializeAudioContext(); // Get context directly
+    }); 
+    detectAudioFormatSupport(uiControls.browserFormatsSpan);
+    setupUIEventListeners(uiControls);
+    initializeUIValues(uiControls);
+    initializeTheme(canvasRefs, uiControls);
+    setupThemeToggle(canvasRefs, uiControls);
 
-        // === NEW: Explicitly Draw Axes After AudioContext is Ready ===
-        // Use the contexts captured from the initial resizeCanvases call
-        if (localAudioContext) { 
+    console.log("[DOMContentLoaded] Setting timeout for AudioContext initialization and axis draw...");
+    setTimeout(() => {
+        console.log("[setTimeout Callback] Initializing AudioContext...");
+        const localAudioContext = initializeAudioContext();
+
+        if (localAudioContext) {
             console.log("[setTimeout Callback] Attempting deferred axis draw. Contexts available:", {
                 specA: !!initialContexts.spectrogramAxisCtx,
                 instA: !!initialContexts.instantaneousWaveformAxisCtx,
                 scrollA: !!initialContexts.scrollingWaveformAxisCtx
             });
-            // Note: Axis drawing functions implicitly use the exported audioContext from audio.js,
-            // but the check here ensures we only call them if initialization succeeded.
-            // Check the captured contexts before drawing
             if (initialContexts.spectrogramAxisCtx) {
-                console.log("[setTimeout Callback] Calling drawSpectrogramAxis..."); // Log Draw Spectrogram Axis
+                console.log("[setTimeout Callback] Calling drawSpectrogramAxis...");
                 drawSpectrogramAxis();
             }
             if (initialContexts.instantaneousWaveformAxisCtx) {
-                 console.log("[setTimeout Callback] Calling drawInstantaneousWaveformAxis..."); // Log Draw Inst Waveform Axis
+                 console.log("[setTimeout Callback] Calling drawInstantaneousWaveformAxis...");
                 drawInstantaneousWaveformAxis(uiControls);
             }
             if (initialContexts.scrollingWaveformAxisCtx) {
-                 console.log("[setTimeout Callback] Calling drawScrollingWaveformAxis..."); // Log Draw Scroll Waveform Axis
+                 console.log("[setTimeout Callback] Calling drawScrollingWaveformAxis...");
                 drawScrollingWaveformAxis(uiControls);
             }
             console.log("[setTimeout Callback] Explicitly drew axes after AudioContext initialization (deferred).");
         } else {
             console.error("[setTimeout Callback] Deferred AudioContext initialization failed, cannot draw axes.");
         }
-        // =============================================================
-    }, 0); // Delay of 0ms
+        
+        // === Stop Animation & Hide Initializing Overlay ===
+        if (initializingIntervalId) {
+            clearInterval(initializingIntervalId);
+            initializingIntervalId = null;
+            console.log('[setTimeout Callback] Stopped initializing animation.');
+        }
+        if (initOverlay) {
+             console.log('[setTimeout Callback] Hiding initializing overlay.');
+            initOverlay.style.display = 'none'; 
+        }
+        // ===============================
+
+    }, 0); 
 
     // === Setup Preloaded Audio Files ===
     const preloadedSelect = document.getElementById('preloaded-audio-select');
@@ -202,27 +194,25 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             console.error('Error loading or parsing audio_files.json:', error);
-            // Optionally disable the dropdown or show an error message
             preloadedSelect.disabled = true;
             preloadedSelect.innerHTML = '<option value="">Error loading files</option>';
         });
 
-    preloadedSelect.addEventListener('change', async () => {
+    preloadedSelect.addEventListener('change', async () => { // Keep async for fetch below
         const selectedFile = preloadedSelect.value;
 
         if (selectedFile) {
-            // Stop any existing audio first
             stopGeneratedAudio();
             stopAudioFile();
 
             const filePath = `Audio_Files/${selectedFile}`;
-            console.log(`Requesting preloaded file: ${filePath}`);
-            actualFileInput.value = ''; // Clear local file input
+            console.log(`Requesting preloaded file via fetch (SW should intercept): ${filePath}`);
+            actualFileInput.value = ''; 
 
-            // --- Loading Overlay Logic ---
+            // Use the *existing* audio loading overlay for file fetching
             let overlayTimeoutId = null;
             const showOverlayWithDelay = () => {
-                if (overlayTimeoutId) clearTimeout(overlayTimeoutId); // Clear previous just in case
+                if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
                 overlayTimeoutId = setTimeout(() => {
                     showLoadingOverlay(selectedFile);
                     overlayTimeoutId = null; 
@@ -234,54 +224,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     overlayTimeoutId = null;
                 }
             };
-            // --- End Overlay Logic ---
-
+            
             try {
-                // --- Check Cache First ---
+                // --- REMOVE Cache Check --- 
+                /* 
                 const cache = await caches.open(AUDIO_CACHE_NAME);
                 const cachedResponse = await cache.match(filePath);
-
-                if (cachedResponse) {
-                    console.log(`Cache hit for ${selectedFile}. Loading from cache.`);
-                    clearOverlayTimeout(); // Don't show overlay for cached file
-                    hideLoadingOverlay(); // Ensure it's hidden if somehow shown
-                    
-                    const audioData = await cachedResponse.arrayBuffer();
-                    handleAudioDataLoad(audioData, selectedFile); // Process cached data
-                    
-                    // Update button text
-                    const chooseFileButton = document.getElementById('choose-local-file-button');
-                    if (chooseFileButton) {
-                        chooseFileButton.textContent = 'Load File'; 
-                    }
-                    return; // Exit early, no network fetch needed
-                } 
+                if (cachedResponse) { ... removed ... } 
+                */
                 // --- End Cache Check ---
                 
-                // --- Not in Cache: Fetch from Network --- 
-                console.log(`Cache miss for ${selectedFile}. Fetching from network...`);
-                showOverlayWithDelay(); // Show overlay (with delay) for network fetch
+                // --- Fetch (will be intercepted by SW) --- 
+                console.log(`Fetching ${selectedFile} (Service Worker will handle cache)...`);
+                showOverlayWithDelay(); 
 
-                const response = await fetch(filePath);
+                const response = await fetch(filePath); // SW intercepts here
 
-                clearOverlayTimeout(); // Clear timeout once fetch starts/responds
+                clearOverlayTimeout();
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error fetching ${selectedFile}! status: ${response.status}`);
+                    // If SW returns fallback or network fails, this will trigger
+                    throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
                 }
 
-                // --- Cache the Network Response --- 
-                // Clone the response stream before consuming it
+                // --- REMOVE Cache Put --- 
+                /*
                 const responseToCache = response.clone(); 
                 await cache.put(filePath, responseToCache);
                 console.log(`Successfully fetched and cached ${selectedFile}.`);
+                */
                 // ----------------------------------
 
-                const audioData = await response.arrayBuffer(); // Consume the original response stream
-                console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}.`);
-                handleAudioDataLoad(audioData, selectedFile); // Process fetched data
+                const audioData = await response.arrayBuffer(); 
+                console.log(`Fetched ${selectedFile} (via SW/Network), size: ${audioData.byteLength}.`);
+                handleAudioDataLoad(audioData, selectedFile);
 
-                // Update button text
                 const chooseFileButton = document.getElementById('choose-local-file-button');
                 if (chooseFileButton) {
                     chooseFileButton.textContent = 'Load File'; 
@@ -289,36 +266,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error(`Error loading preloaded file ${selectedFile}:`, error);
-                // Maybe disable play button or show error
                 updateButtonState(uiControls.playPauseFileButton, false, true); 
-                 // --- Reset file info display on error --- 
                  const infoDisplay = document.getElementById('file-info-display');
                  if (infoDisplay) {
                      infoDisplay.innerHTML = '<p>File: Error</p><p>Duration: --</p>';
                  }
-                 // --- Disable playback slider on error --- 
                  const playbackRateSlider = document.getElementById('playback-rate');
                  if (playbackRateSlider) {
                      playbackRateSlider.disabled = true;
                  }
-                 // ------------------------------------
             } finally {
-                 // Always hide overlay regardless of success or error
-                 clearOverlayTimeout(); // Ensure timeout is cleared
+                 clearOverlayTimeout(); 
                  hideLoadingOverlay(); 
             }
-
-            // --- Remove Cancel Button Logic (less applicable with fetch) ---
-            // Since fetch doesn't have built-in abort like XHR for simple cases,
-            // and cancellation during precache isn't implemented, we remove this.
-            // -------------------------------------------------------------
-
         } else {
             // Handle case where "-- Select a file --" is chosen
             stopGeneratedAudio();
             stopAudioFile();
-            actualFileInput.value = ''; // Clear local file input if user deselects
-            // Reset UI elements if needed
+            actualFileInput.value = ''; 
             const infoDisplay = document.getElementById('file-info-display');
             if (infoDisplay) {
                  infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
@@ -327,8 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
              if (playbackRateSlider) {
                  playbackRateSlider.disabled = true;
              }
-            updateButtonState(uiControls.playPauseFileButton, false, true); // Disable play button
-            // Maybe update other UI elements as needed
+            updateButtonState(uiControls.playPauseFileButton, false, true); 
         }
     });
 
@@ -359,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // setTimeout(() => resizeCanvases(canvasRefs, uiControls), 0); // ✨ REMOVED: Initial draw now handled via initializeTheme -> applyTheme ✨
     // ✨ REMOVED AGAIN: The explicit calls after initializeAudioContext handle the initial draw now ✨
 
-    // === Call precaching function after initial setup ===
-    precacheAudioFiles(); 
-    // =====================================================
+    // === REMOVE Call to precacheAudioFiles ===
+    // precacheAudioFiles(); 
+    // ========================================
 }); 
