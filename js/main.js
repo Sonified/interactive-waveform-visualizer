@@ -67,18 +67,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- End Service Worker Registration ---
     
-    // === Show Initializing Overlay & Start Animation ===
+    // === Show Initializing Overlay & Start Animation (Only if not controlled by SW) ===
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
-    if (initOverlay && initTextElement) {
-        console.log('[DOMContentLoaded] Showing initializing overlay.');
-        initOverlay.style.display = 'flex'; 
-        let dotCount = 0; // Start with 0 dots
-        const baseText = "Initializing Visualizer";
-        initializingIntervalId = setInterval(() => {
-            initTextElement.textContent = baseText + ".".repeat(dotCount);
-            dotCount = (dotCount + 1) % 4; // Cycle 0, 1, 2, 3
-        }, 300); // Update every 300ms (faster)
+    
+    // Check if a Service Worker is controlling the page
+    if (!navigator.serviceWorker.controller) {
+        console.log('[DOMContentLoaded] No active Service Worker controller found. Showing initializing overlay.');
+        if (initOverlay && initTextElement) {
+            initOverlay.style.display = 'flex'; 
+            let dotCount = 0; // Start with 0 dots
+            const baseText = "Initializing Visualizer";
+            initializingIntervalId = setInterval(() => {
+                initTextElement.textContent = baseText + ".".repeat(dotCount);
+                dotCount = (dotCount + 1) % 4; // Cycle 0, 1, 2, 3
+            }, 300); // Update every 300ms (faster)
+        }
+    } else {
+        console.log('[DOMContentLoaded] Active Service Worker controller found. Skipping initializing overlay.');
     }
     // ================================
 
