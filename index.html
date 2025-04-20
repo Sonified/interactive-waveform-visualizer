@@ -10,10 +10,12 @@
     <style>
         #initializing-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: rgba(0, 0, 0, 1); /* 100% opaque black */
+            /* Default to light grey background for light theme */
+            background-color: #e8e8e8; 
             display: flex; /* SHOW BY DEFAULT */
             justify-content: center; align-items: center; 
-            z-index: 1001; color: white; font-size: 1.5em; text-align: center;
+            /* Default text color is now determined by #initializing-text */
+            z-index: 1001; font-size: 1.5em; text-align: center;
             opacity: 1;
             transition: opacity 0.5s ease-in-out;
         }
@@ -24,16 +26,16 @@
         }
 
         #initializing-text {
-            /* Initial style similar to h1 */
+            /* Match h1 style exactly */
             font-size: 1.8em; 
-            font-weight: 700; /* Explicitly match h1 bold */
-            line-height: 1.2; /* Add a typical line-height */
-            color: white; /* Match overlay color */
-            text-shadow: none; /* Match h1 */
-            margin: 0; /* Remove default margins */
+            font-weight: 700; 
+            line-height: 1.2; 
+            color: black; /* Default to black text for light theme */
+            text-shadow: none; 
+            margin: 0; 
             /* Positioning for animation */
-            position: relative; /* Changed from absolute for simpler centering */
-            top: 0; /* Start centered vertically (relative to flex container) */
+            position: relative; 
+            top: 0; 
             opacity: 1;
             /* Transition for properties that will change */
             transition: top 0.5s ease-in-out, 
@@ -43,11 +45,19 @@
 
         #initializing-text.animate-to-header {
              /* Move to approximate header position */
-             top: -45vh; /* Adjust as needed - moves it way up */
-             /* Match h1 font size (redundant if initial matches, but safe) */
+             top: -45vh; 
+             /* Match h1 font size (redundant, but safe) */
              font-size: 1.8em; 
-             /* Fade text out slightly faster? Or keep same as background? */
+             /* Fade text out */
              opacity: 0; 
+        }
+
+        /* Dark Theme Overrides for Initializing Overlay */
+        html.midnight-blue #initializing-overlay {
+            background-color: rgba(0, 0, 0, 1); /* Restore black background */
+        }
+        html.midnight-blue #initializing-text {
+            color: white; /* Restore white text */
         }
     </style>
     <!-- ============================================== -->
@@ -1376,7 +1386,7 @@
 
     <!-- Initializing Overlay -->
     <div id="initializing-overlay">
-        <div id="initializing-text"></div>
+        <div id="initializing-text">Interactive Waveform Visualizer</div>
     </div>
 </body>
 </html>

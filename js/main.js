@@ -70,11 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
     
-    // Set initial text (no animation needed now)
-    if (initTextElement) {
-        initTextElement.textContent = "Interactive Waveform Visualizer"; 
-    }
-
     // Check if a Service Worker is controlling the page
     if (navigator.serviceWorker.controller) {
         // CACHED LOAD: SW is active, fade out immediately
@@ -82,20 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initOverlay) {
             console.log('[DOMContentLoaded] Found overlay. Adding fade-out/animate classes NOW.');
             initOverlay.classList.add('fade-out');
-            if (initTextElement) initTextElement.classList.add('animate-to-header'); // Add text animation class
-            // Set display: none after fade completes
+            if (initTextElement) initTextElement.classList.add('animate-to-header'); 
             setTimeout(() => {
                  if (initOverlay) { 
                     initOverlay.style.display = 'none';
                     initOverlay.classList.remove('fade-out');
-                    if (initTextElement) initTextElement.classList.remove('animate-to-header'); // Remove text animation class
+                    if (initTextElement) initTextElement.classList.remove('animate-to-header'); 
                  }
-            }, 500); // Matches CSS transition duration
+            }, 500); 
         }
     } else {
         // FIRST LOAD: No SW controller (overlay shown by CSS)
         console.log('[DOMContentLoaded] No active SW controller. Overlay shown by CSS.');
-        // REMOVED: Dot animation setInterval logic
+        // No animation needed here anymore
     }
     // ========================================================
 
