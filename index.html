@@ -968,6 +968,21 @@
         /* --- Theme Styles --- */
         /* ====================== */
 
+        #initializing-overlay {
+            /* Keep existing styles */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: rgba(0, 0, 0, 1); /* Keep opaque black for now */
+            display: none; justify-content: center; align-items: center; 
+            z-index: 1001; color: white; font-size: 1.5em; text-align: center;
+            /* Add transition for opacity */
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #initializing-overlay.fade-out {
+            opacity: 0;
+        }
+
     </style>
 </head>
 <body>

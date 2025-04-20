@@ -166,17 +166,30 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[setTimeout Callback] Deferred AudioContext initialization failed, cannot draw axes.");
         }
         
-        // === Stop Animation & Hide Initializing Overlay ===
+        // === Stop Animation & Initiate Fade Out ===
         if (initializingIntervalId) {
             clearInterval(initializingIntervalId);
             initializingIntervalId = null;
             console.log('[setTimeout Callback] Stopped initializing animation.');
         }
+        
         if (initOverlay) {
-             console.log('[setTimeout Callback] Hiding initializing overlay.');
-            initOverlay.style.display = 'none'; 
+            console.log('[setTimeout Callback] Starting overlay fade-out sequence.');
+            // Wait 500ms before starting fade
+            setTimeout(() => {
+                console.log('[Overlay Fade] Adding fade-out class.');
+                initOverlay.classList.add('fade-out'); 
+                
+                // Wait for fade transition (500ms) + small buffer before hiding
+                setTimeout(() => {
+                    console.log('[Overlay Fade] Setting display: none and removing class.');
+                    initOverlay.style.display = 'none';
+                    initOverlay.classList.remove('fade-out'); // Cleanup
+                }, 500); // Matches CSS transition duration
+
+            }, 500); // Initial delay before fade starts
         }
-        // ===============================
+        // ===========================================
 
     }, 0); 
 
