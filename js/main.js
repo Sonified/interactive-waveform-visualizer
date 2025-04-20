@@ -40,6 +40,56 @@ let spectrogramAxisCtx = null;
 let instantaneousWaveformAxisCtx = null;
 let scrollingWaveformAxisCtx = null;
 
+// Define cache name globally or within the scope where needed
+const AUDIO_CACHE_NAME = 'audio-cache-v1';
+
+// --- Function to precache audio files ---
+async function precacheAudioFiles() {
+    console.log("Starting audio file precaching...");
+    try {
+        const response = await fetch('audio_files.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error loading audio_files.json! status: ${response.status}`);
+        }
+        const audioFilesList = await response.json();
+        console.log(`Found ${audioFilesList.length} files to potentially precache.`);
+
+        const cache = await caches.open(AUDIO_CACHE_NAME);
+        console.log(`Cache '${AUDIO_CACHE_NAME}' opened.`);
+
+        let cachedCount = 0;
+        let skippedCount = 0;
+
+        for (const filename of audioFilesList) {
+            const filePath = `Audio_Files/${filename}`;
+            try {
+                const cachedResponse = await cache.match(filePath);
+                if (cachedResponse) {
+                    // console.log(`Skipping ${filename}, already in cache.`);
+                    skippedCount++;
+                } else {
+                    console.log(`Caching ${filename}...`);
+                    // Fetch and cache
+                    const networkResponse = await fetch(filePath);
+                    if (networkResponse.ok) {
+                        await cache.put(filePath, networkResponse); // Store the original response
+                        console.log(`Successfully cached ${filename}.`);
+                        cachedCount++;
+                    } else {
+                        console.warn(`Failed to fetch ${filename} for caching, status: ${networkResponse.status}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`Error during caching process for ${filename}:`, err);
+            }
+        }
+        console.log(`Pre-caching finished. Cached: ${cachedCount}, Skipped (already cached): ${skippedCount}`);
+
+    } catch (error) {
+        console.error('Error during audio precaching process:', error);
+    }
+}
+
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Define objects containing references from config.js
@@ -141,170 +191,128 @@ document.addEventListener('DOMContentLoaded', () => {
             preloadedSelect.innerHTML = '<option value="">Error loading files</option>';
         });
 
-    preloadedSelect.addEventListener('change', () => {
+    preloadedSelect.addEventListener('change', async () => {
         const selectedFile = preloadedSelect.value;
-        let xhr = null; // Declare xhr here to make it accessible to cancel button
 
         if (selectedFile) {
-            // --- NEW: Stop any existing audio first --- 
+            // Stop any existing audio first
             stopGeneratedAudio();
             stopAudioFile();
-            // --- END: Stop any existing audio --- 
 
             const filePath = `Audio_Files/${selectedFile}`;
-            console.log(`Fetching preloaded file: ${filePath}`);
+            console.log(`Requesting preloaded file: ${filePath}`);
             actualFileInput.value = ''; // Clear local file input
 
-            // --- Start Loading Overlay (with delay) ---
+            // --- Loading Overlay Logic ---
             let overlayTimeoutId = null;
-            overlayTimeoutId = setTimeout(() => {
-                showLoadingOverlay(selectedFile);
-                overlayTimeoutId = null; // Clear the ID once the timeout has run
-            }, 150); // Delay showing overlay by 150ms
-            // ----------------------------------------
-
-            // Use XMLHttpRequest for progress tracking
-            xhr = new XMLHttpRequest(); // Assign to the outer scope variable
-            console.log(`[Cache Check?] Intending to fetch ${filePath} via XHR.`);
-            xhr.open('GET', filePath, true);
-            xhr.responseType = 'arraybuffer';
-
-            xhr.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    updateLoadingProgress(event.loaded, event.total);
-                } else {
-                    // Optional: Handle cases where progress is not computable
-                    // updateLoadingProgress(0, 0); // Or show indeterminate state
-                }
+            const showOverlayWithDelay = () => {
+                if (overlayTimeoutId) clearTimeout(overlayTimeoutId); // Clear previous just in case
+                overlayTimeoutId = setTimeout(() => {
+                    showLoadingOverlay(selectedFile);
+                    overlayTimeoutId = null; 
+                }, 150);
             };
-
-            xhr.onload = () => {
-                // --- Clear the overlay timeout --- 
+            const clearOverlayTimeout = () => {
                 if (overlayTimeoutId) {
                     clearTimeout(overlayTimeoutId);
                     overlayTimeoutId = null;
                 }
-                // ---------------------------------
+            };
+            // --- End Overlay Logic ---
 
-                if (xhr.status === 200) {
-                    const audioData = xhr.response;
-                    console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}.`);
-                    handleAudioDataLoad(audioData, selectedFile); // Call function in audio.js
+            try {
+                // --- Check Cache First ---
+                const cache = await caches.open(AUDIO_CACHE_NAME);
+                const cachedResponse = await cache.match(filePath);
+
+                if (cachedResponse) {
+                    console.log(`Cache hit for ${selectedFile}. Loading from cache.`);
+                    clearOverlayTimeout(); // Don't show overlay for cached file
+                    hideLoadingOverlay(); // Ensure it's hidden if somehow shown
                     
-                    // Update button text (moved inside success handler)
+                    const audioData = await cachedResponse.arrayBuffer();
+                    handleAudioDataLoad(audioData, selectedFile); // Process cached data
+                    
+                    // Update button text
                     const chooseFileButton = document.getElementById('choose-local-file-button');
                     if (chooseFileButton) {
                         chooseFileButton.textContent = 'Load File'; 
                     }
-                } else {
-                    console.error(`HTTP error! status: ${xhr.status}`);
-                    // Maybe disable play button or show error
-                    updateButtonState(uiControls.playPauseFileButton, false, true); 
-                }
-                hideLoadingOverlay(); // Hide overlay on success or expected HTTP error
+                    return; // Exit early, no network fetch needed
+                } 
+                // --- End Cache Check ---
+                
+                // --- Not in Cache: Fetch from Network --- 
+                console.log(`Cache miss for ${selectedFile}. Fetching from network...`);
+                showOverlayWithDelay(); // Show overlay (with delay) for network fetch
 
-                // --- Add Cancel Button Listener --- 
-                const cancelButton = document.getElementById('loading-cancel-button');
-                const cancelHandler = () => { // Define handler separately to remove it later
-                    console.log("Cancel handler entered. Current xhr state:", xhr);
-                    console.log("Cancel button clicked.");
-                    if (xhr) {
-                        xhr.abort(); // Abort the download
-                        console.log("XHR aborted.");
-                    }
-                    // Clear overlay timeout if it's still pending
-                    if (overlayTimeoutId) {
-                        clearTimeout(overlayTimeoutId);
-                        overlayTimeoutId = null;
-                        console.log("Overlay timeout cleared.");
-                    }
-                    hideLoadingOverlay(); // Hide overlay (this also clears the tip interval)
-                    // Reset UI elements
-                    updateButtonState(uiControls.playPauseFileButton, false, true); // Disable play/restart
-                    const infoDisplay = document.getElementById('file-info-display');
-                    if (infoDisplay) {
-                        infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
-                    }
-                    const playbackRateSlider = document.getElementById('playback-rate');
-                    if (playbackRateSlider) {
-                        playbackRateSlider.disabled = true;
-                    }
-                    // Remove this specific listener to prevent memory leaks
-                    cancelButton.removeEventListener('click', cancelHandler);
-                };
-                // Add the listener
-                if (cancelButton) {
-                    cancelButton.addEventListener('click', cancelHandler);
-                } else {
-                    console.error("Cancel button not found!");
+                const response = await fetch(filePath);
+
+                clearOverlayTimeout(); // Clear timeout once fetch starts/responds
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error fetching ${selectedFile}! status: ${response.status}`);
                 }
+
+                // --- Cache the Network Response --- 
+                // Clone the response stream before consuming it
+                const responseToCache = response.clone(); 
+                await cache.put(filePath, responseToCache);
+                console.log(`Successfully fetched and cached ${selectedFile}.`);
                 // ----------------------------------
-            };
 
-            xhr.onerror = () => {
-                // --- Clear the overlay timeout --- 
-                if (overlayTimeoutId) {
-                    clearTimeout(overlayTimeoutId);
-                    overlayTimeoutId = null;
+                const audioData = await response.arrayBuffer(); // Consume the original response stream
+                console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}.`);
+                handleAudioDataLoad(audioData, selectedFile); // Process fetched data
+
+                // Update button text
+                const chooseFileButton = document.getElementById('choose-local-file-button');
+                if (chooseFileButton) {
+                    chooseFileButton.textContent = 'Load File'; 
                 }
-                // ---------------------------------
 
-                console.error(`Network error fetching audio file ${selectedFile}`);
+            } catch (error) {
+                console.error(`Error loading preloaded file ${selectedFile}:`, error);
                 // Maybe disable play button or show error
                 updateButtonState(uiControls.playPauseFileButton, false, true); 
-                hideLoadingOverlay(); // Hide overlay on network error
-            };
+                 // --- Reset file info display on error --- 
+                 const infoDisplay = document.getElementById('file-info-display');
+                 if (infoDisplay) {
+                     infoDisplay.innerHTML = '<p>File: Error</p><p>Duration: --</p>';
+                 }
+                 // --- Disable playback slider on error --- 
+                 const playbackRateSlider = document.getElementById('playback-rate');
+                 if (playbackRateSlider) {
+                     playbackRateSlider.disabled = true;
+                 }
+                 // ------------------------------------
+            } finally {
+                 // Always hide overlay regardless of success or error
+                 clearOverlayTimeout(); // Ensure timeout is cleared
+                 hideLoadingOverlay(); 
+            }
 
-            xhr.send();
+            // --- Remove Cancel Button Logic (less applicable with fetch) ---
+            // Since fetch doesn't have built-in abort like XHR for simple cases,
+            // and cancellation during precache isn't implemented, we remove this.
+            // -------------------------------------------------------------
 
-            /* // --- OLD Fetch code - replaced by XMLHttpRequest ---
-            fetch(filePath)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    // Cannot easily get progress with standard fetch .arrayBuffer()
-                    return response.arrayBuffer(); 
-                })
-                .then(audioData => {
-                    // TODO: Call a function in audio.js to handle this ArrayBuffer
-                    // e.g., loadAudioData(audioData, selectedFile);
-                    console.log(`Fetched ${selectedFile}, size: ${audioData.byteLength}. Need to implement audio loading.`);
-                    // For now, just log success
-                    // Placeholder for loadAudioData call:
-                     handleAudioDataLoad(audioData, selectedFile);
-
-                    // --- NEW: Change button text ---
-                    const chooseFileButton = document.getElementById('choose-local-file-button');
-                    if (chooseFileButton) {
-                        chooseFileButton.textContent = 'Load File';
-                    }
-                    // --- END: Change button text ---
-
-                })
-                .catch(error => {
-                    console.error(`Error fetching audio file ${selectedFile}:`, error);
-                    // Maybe disable play button or show error
-                     updateButtonState(uiControls.playPauseFileButton, false, true); 
-                });
-            */ // --- End of OLD Fetch code ---
         } else {
-            // Option "-- Select a file --" chosen
-             // Potentially stop audio if it was playing a preloaded file
-             stopAudioFile(); // Ensure any playing file stops
-             audioBuffer = null; // Clear buffer
-             updateButtonState(uiControls.playPauseFileButton, false, true); // Update button state (disable play/restart)
-             // --- NEW: Reset file info display ---
-             const infoDisplay = document.getElementById('file-info-display');
-             if (infoDisplay) {
+            // Handle case where "-- Select a file --" is chosen
+            stopGeneratedAudio();
+            stopAudioFile();
+            actualFileInput.value = ''; // Clear local file input if user deselects
+            // Reset UI elements if needed
+            const infoDisplay = document.getElementById('file-info-display');
+            if (infoDisplay) {
                  infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
              }
-             // --- NEW: Disable playback slider ---
              const playbackRateSlider = document.getElementById('playback-rate');
              if (playbackRateSlider) {
                  playbackRateSlider.disabled = true;
              }
-             // -------------------------------------
+            updateButtonState(uiControls.playPauseFileButton, false, true); // Disable play button
+            // Maybe update other UI elements as needed
         }
     });
 
@@ -334,4 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wrap in setTimeout to ensure audioContext.sampleRate is available
     // setTimeout(() => resizeCanvases(canvasRefs, uiControls), 0); // ✨ REMOVED: Initial draw now handled via initializeTheme -> applyTheme ✨
     // ✨ REMOVED AGAIN: The explicit calls after initializeAudioContext handle the initial draw now ✨
+
+    // === Call precaching function after initial setup ===
+    precacheAudioFiles(); 
+    // =====================================================
 }); 

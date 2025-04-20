@@ -63,10 +63,14 @@ export function updateButtonState(button, isPlaying, isDisabled = false) {
 const bodyElement = document.body;
 
 function applyTheme(themeName, canvasRefs, uiControls) {
+    // Apply class to the HTML element, not the body
+    const targetElement = document.documentElement;
     if (themeName === 'midnight-blue') {
-        bodyElement.classList.add('midnight-blue');
+        // bodyElement.classList.add('midnight-blue');
+        targetElement.classList.add('midnight-blue');
     } else {
-        bodyElement.classList.remove('midnight-blue');
+        // bodyElement.classList.remove('midnight-blue');
+        targetElement.classList.remove('midnight-blue');
     }
     if (canvasRefs && uiControls) {
         if (spectrogramAxisCtx && instantaneousWaveformAxisCtx && scrollingWaveformAxisCtx) {

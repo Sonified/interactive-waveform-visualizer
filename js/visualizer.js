@@ -136,7 +136,7 @@ function drawInstantaneousWaveform() {
     const canvasHeight = canvas.height;
 
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
     const bgColor = isDarkTheme ? '#0f1a3b' : '#f8f9fa';
     const lineColor = isDarkTheme ? '#ecf0f1' : '#3498db'; // White-ish for dark theme
     const zeroLineColor = isDarkTheme ? 'rgba(189, 195, 199, 0.35)' : 'rgba(128, 128, 128, 0.35)'; // Lighter grey line
@@ -194,7 +194,7 @@ function drawScrollingWaveform() {
     const scrollAmount = Math.max(1, Math.round(parseFloat(scrollSpeedWaveformSlider.value)));
     const columnWidth = scrollAmount;
     const columnX = canvasWidth - columnWidth;
-    const isDarkThemeScrolling = document.body.classList.contains('midnight-blue');
+    const isDarkThemeScrolling = document.documentElement.classList.contains('midnight-blue');
     const bgColorScrolling = isDarkThemeScrolling ? '#0f1a3b' : '#f8f9fa';
     const lineColorScrolling = isDarkThemeScrolling ? '#ecf0f1' : '#3498db';
     const zeroLineColorScrolling = isDarkThemeScrolling ? 'rgba(189, 195, 199, 0.35)' : 'rgba(128, 128, 128, 0.35)';
@@ -512,11 +512,12 @@ export function resizeCanvases(canvasRefs, controls) {
     // Redraw all axes after resizing and context acquisition
     if (spectrogramAxisCtx && audioContext) drawSpectrogramAxis();
     if (instantaneousWaveformAxisCtx && audioContext) drawInstantaneousWaveformAxis(controls);
+    if (scrollingWaveformAxisCtx && audioContext) drawScrollingWaveformAxis(controls);
 
     // --- Draw initial static zero lines on waveform canvases --- 
     const drawInitialZeroLine = (canvas, ctx) => {
         if (!ctx || !canvas) return;
-        const isDarkTheme = document.body.classList.contains('midnight-blue');
+        const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
         const bgColor = isDarkTheme ? '#0f1a3b' : '#f8f9fa';
         const zeroLineColor = isDarkTheme ? 'rgba(189, 195, 199, 0.35)' : 'rgba(128, 128, 128, 0.35)';
         const canvasHeight = canvas.height;
@@ -582,7 +583,7 @@ export function drawSpectrogramAxis() {
     console.log(`Final values: drawingHeight=${drawingHeight}, yOffset=${yOffset}`);
 
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
     // Use a SOLID color for clearing to prevent ghosting artifacts
     const bgColor = isDarkTheme ? 'rgb(10, 15, 46)' : 'white'; 
     const textColor = isDarkTheme ? '#ecf0f1' : '#333';
@@ -710,8 +711,8 @@ export function drawInstantaneousWaveformAxis(controls) {
     if (isNaN(scale)) return;
 
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
-    const bgColor = isDarkTheme ? 'rgba(10, 15, 46, 0.8)' : 'white';
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
+    const bgColor = isDarkTheme ? 'rgb(10, 15, 46)' : 'white';
     const textColor = isDarkTheme ? '#ecf0f1' : '#333';
     const tickColor = isDarkTheme ? '#bdc3c7' : '#777';
     const zeroLineColor = isDarkTheme ? '#3498db' : '#aaa'; // Make zero line blue in dark mode
@@ -815,8 +816,8 @@ export function drawScrollingWaveformAxis(controls) {
     if (isNaN(scale)) return;
 
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
-    const bgColor = isDarkTheme ? 'rgba(10, 15, 46, 0.8)' : 'white';
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
+    const bgColor = isDarkTheme ? 'rgb(10, 15, 46)' : 'white';
     const textColor = isDarkTheme ? '#ecf0f1' : '#333';
     const tickColor = isDarkTheme ? '#bdc3c7' : '#777';
     const zeroLineColor = isDarkTheme ? '#3498db' : '#aaa'; // Make zero line blue in dark mode
@@ -914,7 +915,7 @@ export function redrawStaticInstantaneousWaveform(controls) {
     }
 
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
     const bgColor = isDarkTheme ? '#0f1a3b' : '#f8f9fa';
     const lineColor = isDarkTheme ? '#ecf0f1' : '#3498db'; // White-ish for dark theme
     const zeroLineColor = isDarkTheme ? 'rgba(189, 195, 199, 0.35)' : 'rgba(128, 128, 128, 0.35)'; // Lighter grey line
@@ -990,7 +991,7 @@ export function redrawStaticScrollingWaveformFromImage(controls) {
     }
     
     // ✨ Theme-aware colors ✨
-    const isDarkTheme = document.body.classList.contains('midnight-blue');
+    const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
     const bgColor = isDarkTheme ? '#0f1a3b' : '#f8f9fa';
     const zeroLineColor = isDarkTheme ? 'rgba(189, 195, 199, 0.35)' : 'rgba(128, 128, 128, 0.35)';
     const canvas = scrollingWaveformCanvas;

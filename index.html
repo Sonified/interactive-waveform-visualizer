@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Waveform Visualizer</title>
     <link rel="icon" type="image/png" href="Images/Waveform_Visualizer_Icon_v2.png">
+    
+    <!-- === Theme Initializer Script (Prevents FOUC) === -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('visualizerTheme');
+                if (savedTheme === 'midnight-blue') {
+                    document.documentElement.classList.add('midnight-blue'); 
+                }
+                // Optional: If you want the default to be dark if nothing is saved
+                // else if (!savedTheme) { 
+                //    document.documentElement.classList.add('midnight-blue');
+                // } 
+            } catch (e) {
+                console.error("Error applying initial theme:", e);
+            }
+        })();
+    </script>
+    <!-- ================================================= -->
+
     <style>
         /* Universal box-sizing */
          * {
@@ -269,7 +289,8 @@
             /* Reduced borders */
             border-left: 3px solid #ddd; 
             border-bottom: 3px solid #ddd; 
-            margin-bottom: 10px; /* Reduce space between panels */
+            /* Revert margin-bottom */
+            margin-bottom: 10px; 
         }
         .visualization-panel:last-of-type {
             margin-bottom: 0; /* No margin for the last panel */
@@ -660,21 +681,21 @@
         }
 
         /* ✨========= MIDNIGHT BLUE THEME OVERRIDES =========✨ */
-        body.midnight-blue {
+        html.midnight-blue body {
             /* background: linear-gradient(to top left, #05081a, #10184a); */ /* ✨ Even darker blue gradient ✨ */
             background: linear-gradient(to top right, #050b27, #131d52); /* ✨ Changed direction, adjusted darkness/lightness ✨ */
             color: #e0e0e0; /* Light base text color */
         }
-        body.midnight-blue header h1 {
+        html.midnight-blue header h1 {
             color: #ffffff;
             text-shadow: none; /* Remove text shadow */
         }
-        body.midnight-blue header p { color: #bdc3c7; }
+        html.midnight-blue header p { color: #bdc3c7; }
 
         /* Panel Backgrounds and Borders */
-        body.midnight-blue .controls-file,
-        body.midnight-blue .controls-generated,
-        body.midnight-blue .visualization-panel {
+        html.midnight-blue .controls-file,
+        html.midnight-blue .controls-generated,
+        html.midnight-blue .visualization-panel {
             /* background: linear-gradient(to top right, rgba(10, 15, 46, 0.85), rgba(45, 25, 65, 0.85)); */ /* ✨ Gradient background ✨ */
             background-color: rgba(10, 15, 46, 0.85); /* Restore solid background */
             /* border: 1px solid #3498db; */ /* Original Blue border */
@@ -683,14 +704,14 @@
             /* Reduced shadow (dark theme) */
             box-shadow: 0 3px 8px rgba(52, 152, 219, 0.3); 
         }
-        body.midnight-blue .controls-file {
+        html.midnight-blue .controls-file {
             /* border-left: 4px solid #2980b9; */ /* ✨ CHANGED: Match Generated Audio darker blue ✨ */
             /* border-bottom: 4px solid #2980b9; */ /* ✨ CHANGED: Match Generated Audio darker blue ✨ */
             /* Reduced borders (dark theme) */
             border-left: 3px solid #2980b9; 
             border-bottom: 3px solid #2980b9; 
         }
-        body.midnight-blue .controls-generated {
+        html.midnight-blue .controls-generated {
              /* border-left: 4px solid #2980b9; */ /* Darker Blue accent */
              /* border-bottom: 4px solid #2980b9; */ /* ✨ RESTORED: Matching darker bottom border ✨ */
              /* Reduced borders (dark theme) */
@@ -699,7 +720,7 @@
         }
 
         /* Update visualization panel for dark theme */
-        body.midnight-blue .visualization-panel {
+        html.midnight-blue .visualization-panel {
             /* border-left: 4px solid #3498db; */ /* REMOVED: Replaced by inset shadow */
             /* Reduced shadow handled by the combined rule above */
             /* box-shadow: 0 5px 10px rgba(52, 152, 219, 0.35); */ 
@@ -710,88 +731,87 @@
         }
 
         /* Headings and Labels within Panels */
-        body.midnight-blue .controls h2, body.midnight-blue .controls h3,
-        body.midnight-blue .visualization-panel h3,
-        body.midnight-blue .vis-controls-label {
+        html.midnight-blue .controls h2, html.midnight-blue .controls h3,
+        html.midnight-blue .visualization-panel h3,
+        html.midnight-blue .vis-controls-label {
             color: #ecf0f1; /* Light grey heading text */
             border-bottom-color: #2c3e50; /* Darker border */
         }
-        body.midnight-blue label { color: #bdc3c7; } /* Lighter label text */
+        html.midnight-blue label { color: #bdc3c7; } /* Lighter label text */
 
         /* Inputs, Selects, Buttons */
-        body.midnight-blue select,
-        body.midnight-blue input[type="file"],
-        body.midnight-blue input[type="text"], /* Add if needed */
-        body.midnight-blue input[type="number"] {
+        html.midnight-blue select,
+        html.midnight-blue input[type="file"],
+        html.midnight-blue input[type="text"], /* Add if needed */
+        html.midnight-blue input[type="number"] {
             background-color: #1c2850; /* Dark input background */
             border-color: #3498db; /* Blue border */
             color: #e0e0e0; /* Light text */
         }
-        body.midnight-blue select option { background-color: #1c2850; color: #e0e0e0; } /* Style dropdown options */
+        html.midnight-blue select option { background-color: #1c2850; color: #e0e0e0; } /* Style dropdown options */
 
-        body.midnight-blue button { background-color: #3498db; color: white; }
-        body.midnight-blue button:hover:not(:disabled) { background-color: #2980b9; }
-        body.midnight-blue button:disabled { background-color: #566573 !important; opacity: 0.6; }
-        body.midnight-blue .play-style { 
+        html.midnight-blue button { background-color: #3498db; color: white; }
+        html.midnight-blue button:hover:not(:disabled) { background-color: #2980b9; }
+        html.midnight-blue button:disabled { background-color: #566573 !important; opacity: 0.6; }
+        html.midnight-blue .play-style { 
             /* background-color: #27ae60; */ /* Original Darker Green */
             background-color: #2ecc71; /* Softer Green */
             color: white; 
         }
-        body.midnight-blue .play-style:hover:not(:disabled) { 
+        html.midnight-blue .play-style:hover:not(:disabled) { 
             /* background-color: #229954; */ /* Original Even Darker Green */
             background-color: #27ae60; /* Use previous standard green for hover */
         }
-        body.midnight-blue .pause-style { 
+        html.midnight-blue .pause-style { 
             /* background-color: #c0392b; */ /* Original Darker Red */
             /* background-color: #e74c3c; */ /* Previous Lighter/Softer Red */
             /* background-color: #ff7f7f; */ /* Previous Even Lighter/Softer Red */
             background-color: #f3665e; /* Intermediate Soft Red */
             color: white; 
         }
-        body.midnight-blue .pause-style:hover:not(:disabled) { 
+        html.midnight-blue .pause-style:hover:not(:disabled) { 
             /* background-color: #a93226; */ /* Original Darker Hover Red */
             /* background-color: #c0392b; */ /* Previous hover */
             background-color: #e74c3c; /* Use previous standard red for hover */
         } 
-        body.midnight-blue input[type="file"].empty-file { background-color: #27ae60; border-color: #229954; }
+        html.midnight-blue input[type="file"].empty-file { background-color: #27ae60; border-color: #229954; }
 
         /* Sliders */
-        body.midnight-blue input[type="range"] {
-             /* Consider custom track/thumb styles if desired, but keep simple for now */
-             background: transparent; /* Base range input often needs reset */
-             accent-color: #3498db; /* Try styling the thumb/track progress */
+        html.midnight-blue input[type="range"] {
+             background: transparent; 
+             accent-color: #3498db; 
         }
-        body.midnight-blue .slider-value { color: #bdc3c7; } /* Lighter slider value text */
+        html.midnight-blue .slider-value { color: #bdc3c7; } 
 
         /* Canvases */
-        body.midnight-blue canvas {
-             background-color: #0f1a3b; /* Dark background for canvases */
-             border-color: #2c3e50; /* Dark border */
+        html.midnight-blue canvas {
+             background-color: #0f1a3b; 
+             border-color: #2c3e50; 
         }
-        body.midnight-blue #spectrogram-axis-canvas,
-        body.midnight-blue #instantaneous-waveform-axis-canvas,
-        body.midnight-blue #scrolling-waveform-axis-canvas {
-            background-color: rgba(10, 15, 46, 0.8) !important; /* Match panel background */
+        html.midnight-blue #spectrogram-axis-canvas,
+        html.midnight-blue #instantaneous-waveform-axis-canvas,
+        html.midnight-blue #scrolling-waveform-axis-canvas {
+            background-color: rgba(10, 15, 46, 0.8) !important; 
         }
 
         /* Theme Toggle Box Dark Style */
-        body.midnight-blue #theme-toggle-container {
-             background-color: rgba(10, 15, 46, 0.9); /* Dark background */
-             border-color: #3498db; /* Blue border */
+        html.midnight-blue #theme-toggle-container {
+             background-color: rgba(10, 15, 46, 0.9); 
+             border-color: #3498db; 
          }
-        body.midnight-blue #theme-toggle-container label {
-            color: #ecf0f1; /* Light text */
+        html.midnight-blue #theme-toggle-container label {
+            color: #ecf0f1; 
          }
 
-        /* ✨ Style the inner controls box on the right in dark mode ✨ */
-        body.midnight-blue .vis-controls {
-            background-color: rgba(28, 40, 80, 0.85); /* Slightly lighter dark blue than panel */
-            border-color: #2c3e50; /* Match heading border color */
+        /* Style the inner controls box on the right in dark mode */
+        html.midnight-blue .vis-controls {
+            background-color: rgba(28, 40, 80, 0.85); 
+            border-color: #2c3e50; 
         }
         /* Ensure label text and slider values inside vis-controls are light */
-        body.midnight-blue .vis-controls label,
-        body.midnight-blue .vis-controls .slider-value {
-            color: #bdc3c7; /* Already set for labels, ensure for values too */
+        html.midnight-blue .vis-controls label,
+        html.midnight-blue .vis-controls .slider-value {
+            color: #bdc3c7; 
         }
 
         /* ✨========= END MIDNIGHT BLUE THEME OVERRIDES =========✨ */
@@ -815,14 +835,14 @@
         }
         
         /* Use the darker breathing animation for specific buttons in midnight blue theme */
-        body.midnight-blue #choose-local-file-button.breathing,
-        body.midnight-blue #play-pause-generated-button.breathing {
-            animation-name: breathing-bg-dark; /* Override animation name only */
+        html.midnight-blue #choose-local-file-button.breathing,
+        html.midnight-blue #play-pause-generated-button.breathing {
+            animation-name: breathing-bg-dark; 
         }
 
         /* Use the darker FILTER breathing animation for select in midnight blue theme */
-        body.midnight-blue #preloaded-audio-select.breathing {
-            animation-name: breathing-filter-dark; /* Override animation name only */
+        html.midnight-blue #preloaded-audio-select.breathing {
+            animation-name: breathing-filter-dark; 
         }
 
         /* Stop ALL breathing animations when any audio is active */
@@ -846,11 +866,11 @@
             background-color: #2980b9; /* Darker blue on hover */
         }
         /* Explicitly ensure dark mode uses the same blue (for specificity) */
-        body.midnight-blue #restart-file-button:not(:disabled) {
+        html.midnight-blue #restart-file-button:not(:disabled) {
             background-color: #3498db;
             color: white;
         }
-        body.midnight-blue #restart-file-button:not(:disabled):hover {
+        html.midnight-blue #restart-file-button:not(:disabled):hover {
              background-color: #2980b9;
         }
 
@@ -864,11 +884,11 @@
             background-color: #2980b9; /* Darker blue on hover */
         }
         /* Ensure dark mode uses the same blue */
-        body.midnight-blue #choose-local-file-button {
+        html.midnight-blue #choose-local-file-button {
             background-color: #3498db;
             color: white;
         }
-        body.midnight-blue #choose-local-file-button:hover {
+        html.midnight-blue #choose-local-file-button:hover {
              background-color: #2980b9;
         }
 

@@ -339,3 +339,39 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
     *   **Simple File Upload:** Exploring a standard "Upload Files" button approach as an alternative or supplement.
     *   **Playlist/Playback System:** The playlist generation and audio playback logic within the concept files might be adaptable for the main visualizer in the future.
 
+## File Sample Rate Display Issue
+
+*   **Problem:** The file info display (`#file-info-display`) was showing the sample rate of the `AudioContext` (e.g., 96000Hz based on system audio settings) rather than the intrinsic sample rate of the loaded audio file (e.g., 44100Hz).
+*   **Investigation:**
+    1.  Verified the code (`js/audio.js`) correctly used `buffer.sampleRate` (where `buffer` is the result of `decodeAudioData`) to display the sample rate, which *should* contain the file's intrinsic rate.
+    2.  Added `console.log` statements to inspect the `AudioBuffer` object immediately after `decodeAudioData` completed.
+    3.  **Root Cause Identified:** The logs confirmed that, in the current browser environment (Chromium), the `decodeAudioData` function was unexpectedly returning the `audioContext.sampleRate` value for the `buffer.sampleRate` property, instead of the actual rate from the file header.
+*   **Resolution:** Since the sample rate value provided by `decodeAudioData` was unreliable in this specific browser context and did not reflect the true file sample rate, the decision was made to remove the sample rate information from the file info display string entirely.
+*   **Cleanup:** The associated debug `console.log` statement was also removed from `js/audio.js` after confirming the issue.
+
+## Preloaded Audio File Caching
+
+*   **Goal:** Improve loading speed for the preloaded audio files after the first visit.
+*   **Implementation:**
+    1.  Added a `precacheAudioFiles` async function to `js/main.js`.
+    2.  This function fetches `audio_files.json`, opens a named cache (`audio-cache-v1`) using the Cache API, iterates through the files, and uses `fetch` and `cache.put` to store any files not already in the cache.
+    3.  Called `precacheAudioFiles()` at the end of the `DOMContentLoaded` listener in `js/main.js` to initiate caching after page setup.
+    4.  Modified the `preloadedSelect` event listener in `js/main.js` to use `async/await`.
+    5.  The listener now checks the cache (`caches.open`, `cache.match`) *before* attempting a network request.
+    6.  If a cached response exists, it's loaded directly.
+    7.  If not cached, `fetch` is used (replacing the previous XHR implementation), and the response is cloned and stored in the cache via `cache.put` before being processed.
+*   **Result:** Preloaded files should load instantly from the cache on subsequent visits after being precached in the background on the first visit (or after a cache clear).
+
+## Theme Loading Flash (FOUC) Prevention
+
+*   **Problem:** When the "Midnight Blue" theme was selected, reloading the page caused a brief flash of the default light theme before the JavaScript applied the dark theme styles from `localStorage`.
+*   **Cause:** Standard JavaScript theme application runs after the initial HTML/CSS render.
+*   **Solution:**
+    1.  Added a small, inline `<script>` block at the very beginning of the `<head>` in `index.html`.
+    2.  This script immediately reads the theme setting from `localStorage`.
+    3.  If the dark theme is selected, it adds the `.midnight-blue` class directly to the `<html>` element (`document.documentElement`) *before* the browser renders the body content.
+    4.  Updated the CSS rules in `index.html` to target `html.midnight-blue` instead of `body.midnight-blue`.
+    5.  Updated the `applyTheme` function in `js/ui.js` to also add/remove the class from `document.documentElement` when the theme is toggled manually.
+    6.  Updated theme checks within JavaScript drawing functions (`js/visualizer.js`) to check `document.documentElement.classList.contains('midnight-blue')`.
+*   **Result:** The correct theme is applied before the initial page render, eliminating the flash of the light theme when the dark theme is active.
+

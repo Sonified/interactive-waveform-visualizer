@@ -481,7 +481,8 @@ export function handleFileLoad(event) {
                 fileGainNode.gain.cancelScheduledValues(audioContext.currentTime);
                 fileGainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
             }
-            fileInfoDisplay.innerHTML = `<p>File: ${audioFileInput.files[0].name}</p><p>Duration: ${buffer.duration.toFixed(2)}s | SR: ${buffer.sampleRate}Hz</p>`;
+            // Remove SR from the display string
+            fileInfoDisplay.innerHTML = `<p>File: ${audioFileInput.files[0].name}</p><p>Duration: ${buffer.duration.toFixed(2)}s</p>`;
             updateButtonState(playPauseFileButton, false, false);
             console.log("Audio file decoded.");
             // Auto-play the file once it's decoded
@@ -516,17 +517,17 @@ export function handleAudioDataLoad(audioData, fileName) {
 
     audioContext.decodeAudioData(audioData)
         .then(buffer => {
+            // Assign the decoded buffer
             audioBuffer = buffer;
-            // Reset timing state for new file
-            fileStartTime = 0;
-            filePauseTime = 0;
-            // Reset file gain to full volume in case it was faded out
-            if (fileGainNode) {
-                fileGainNode.gain.cancelScheduledValues(audioContext.currentTime);
-                fileGainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
+
+            // Update file info display
+            if (fileInfoDisplay) {
+                // --- REMOVE LOG BEFORE UPDATING DISPLAY ---
+                // console.log(`AUDIO: Decoded Buffer Info - File: ${fileName}, Duration: ${buffer.duration.toFixed(2)}, File SR: ${buffer.sampleRate}, Context SR: ${audioContext.sampleRate}`);
+                // ----------------------------------------
+                // Remove SR from the display string
+                fileInfoDisplay.innerHTML = `<p>File: ${fileName}</p><p>Duration: ${buffer.duration.toFixed(2)}s</p>`;
             }
-            // Update the file info display with the preloaded file name
-            fileInfoDisplay.innerHTML = `<p>File: ${fileName}</p><p>Duration: ${buffer.duration.toFixed(2)}s | SR: ${buffer.sampleRate}Hz</p>`;
             updateButtonState(playPauseFileButton, false, false); // Enable play button
             // Enable the playback rate slider
             const playbackRateSlider = document.getElementById('playback-rate');
