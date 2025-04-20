@@ -451,7 +451,7 @@ export function resizeCanvases(canvasRefs, controls) {
     // Calculate base responsive height, including adjustment
     const calculatedHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
     // NOW enforce the 200px minimum
-    const finalWaveformHeight = Math.max(160, calculatedHeight); // Enforce 200px minimum
+    const finalWaveformHeight = Math.max(160, calculatedHeight); // Enforce 160px minimum
     console.log(`[resizeCanvases] finalWaveformHeight = Math.max(200, ${calculatedHeight}) = ${finalWaveformHeight}`); // Updated Log (200)
 
     const finalSpectrogramHeight = Math.round(Math.max(minSpectrogramHeight, targetHeightPerVis)) + 100; //THIS is how we change the height of the spectrogram
