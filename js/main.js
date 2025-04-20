@@ -70,28 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
     
-    // Check if a Service Worker is controlling the page
-    if (navigator.serviceWorker.controller) {
-        // CACHED LOAD: SW is active, fade out immediately
-        console.log('[DOMContentLoaded] Active SW controller. Fading out overlay immediately.');
-        if (initOverlay) {
-            console.log('[DOMContentLoaded] Found overlay. Adding fade-out/animate classes NOW.');
-            initOverlay.classList.add('fade-out');
-            if (initTextElement) initTextElement.classList.add('animate-to-header'); 
-            setTimeout(() => {
-                 if (initOverlay) { 
-                    initOverlay.style.display = 'none';
-                    initOverlay.classList.remove('fade-out');
-                    if (initTextElement) initTextElement.classList.remove('animate-to-header'); 
-                 }
-            }, 500); 
-        }
-    } else {
-        // FIRST LOAD: No SW controller (overlay shown by CSS)
-        console.log('[DOMContentLoaded] No active SW controller. Overlay shown by CSS.');
-        // No animation needed here anymore
-    }
-    // ========================================================
+    // REMOVED: Conditional check for Service Worker controller 
+    // The overlay is now always shown initially by CSS, and the fade-out 
+    // is handled unconditionally after setup.
+    console.log('[DOMContentLoaded] Initializing page. Overlay shown by CSS.');
 
     // Define objects containing references from config.js
     const canvasRefs = {
@@ -171,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[setTimeout Callback] Deferred AudioContext initialization failed, cannot draw axes.");
         }
         
-        // === Trigger Delayed Hide (Only if Overlay wasn't hidden immediately) ===
+        // === Trigger Delayed Hide (Overlay is always visible initially now) ===
         // Clear any lingering interval (shouldn't be one, but safe)
         if (initializingIntervalId) {
             clearInterval(initializingIntervalId);
@@ -180,18 +162,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const overlayToHide = document.getElementById('initializing-overlay'); 
         const textToAnimate = document.getElementById('initializing-text');
-        // Check if overlay is still visible 
-        if (overlayToHide && overlayToHide.style.display !== 'none') { 
-            console.log('[setTimeout Callback] Starting *delayed* overlay fade-out sequence.');
+        // Check if overlay exists (it should)
+        if (overlayToHide) { 
+            console.log('[setTimeout Callback] Starting overlay fade-out sequence (runs for all loads).');
             // Wait 500ms before starting fade
             setTimeout(() => {
-                console.log('[Overlay Delayed Fade] Adding fade-out/animate classes.');
+                console.log('[Overlay Fade] Adding fade-out/animate classes.');
                 overlayToHide.classList.add('fade-out'); 
                 if (textToAnimate) textToAnimate.classList.add('animate-to-header'); // Add text animation class
                 
                 // Wait for fade transition (500ms) before hiding
                 setTimeout(() => {
-                    console.log('[Overlay Delayed Fade] Setting display: none and removing classes.');
+                    console.log('[Overlay Fade] Setting display: none and removing classes.');
                     overlayToHide.style.display = 'none';
                     overlayToHide.classList.remove('fade-out'); 
                     if (textToAnimate) textToAnimate.classList.remove('animate-to-header'); // Remove text animation class
