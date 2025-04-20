@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             preloadedSelect.innerHTML = '<option value="">Error loading files</option>';
         });
 
-    preloadedSelect.addEventListener('change', async () => { // Keep async for fetch below
+    preloadedSelect.addEventListener('change', async () => { 
         const selectedFile = preloadedSelect.value;
 
         if (selectedFile) {
@@ -223,10 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAudioFile();
 
             const filePath = `Audio_Files/${selectedFile}`;
-            console.log(`Requesting preloaded file via fetch (SW should intercept): ${filePath}`);
+            // console.log(`Requesting preloaded file: ${filePath}`); // Simplified log
             actualFileInput.value = ''; 
 
-            // Use the *existing* audio loading overlay for file fetching
             let overlayTimeoutId = null;
             const showOverlayWithDelay = () => {
                 if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
@@ -243,46 +242,53 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             try {
-                // --- REMOVE Cache Check --- 
-                /* 
-                const cache = await caches.open(AUDIO_CACHE_NAME);
-                const cachedResponse = await cache.match(filePath);
-                if (cachedResponse) { ... removed ... } 
-                */
-                // --- End Cache Check ---
-                
-                // --- Fetch (will be intercepted by SW) --- 
-                console.log(`Fetching ${selectedFile} (Service Worker will handle cache)...`);
-                showOverlayWithDelay(); 
+                // --- Check Cache First ---
+                console.log(`[Preload Select] Checking cache for: ${filePath}`);
+                const audioCache = await caches.open(AUDIO_CACHE_NAME);
+                const cachedResponse = await audioCache.match(filePath);
 
-                const response = await fetch(filePath); // SW intercepts here
+                if (cachedResponse) {
+                    console.log(`[Preload Select] Cache hit! Loading ${selectedFile} from cache.`);
+                    const audioData = await cachedResponse.arrayBuffer();
+                    handleAudioDataLoad(audioData, selectedFile);
+                    // Update button text (if needed, might be redundant if already loaded)
+                    const chooseFileButton = document.getElementById('choose-local-file-button');
+                    if (chooseFileButton) {
+                        chooseFileButton.textContent = 'Load File'; 
+                    }
+                } else {
+                    // --- Fetch if not in cache (Fallback) ---
+                    console.log(`[Preload Select] Cache miss. Fetching ${selectedFile} from network...`);
+                    showOverlayWithDelay(); 
 
-                clearOverlayTimeout();
+                    const response = await fetch(filePath); 
 
-                if (!response.ok) {
-                    // If SW returns fallback or network fails, this will trigger
-                    throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
+                    clearOverlayTimeout();
+
+                    if (!response.ok) {
+                        throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
+                    }
+
+                    // --- Cache the fetched response (Fallback) ---
+                    const responseToCache = response.clone();
+                    await audioCache.put(filePath, responseToCache);
+                    console.log(`[Preload Select] Successfully fetched and cached ${selectedFile} (fallback).`);
+                    // -------------------------------------------
+
+                    const audioData = await response.arrayBuffer(); 
+                    console.log(`[Preload Select] Fetched ${selectedFile} from network, size: ${audioData.byteLength}.`);
+                    handleAudioDataLoad(audioData, selectedFile);
+
+                    // Update button text
+                    const chooseFileButton = document.getElementById('choose-local-file-button');
+                    if (chooseFileButton) {
+                        chooseFileButton.textContent = 'Load File'; 
+                    }
                 }
-
-                // --- REMOVE Cache Put --- 
-                /*
-                const responseToCache = response.clone(); 
-                await cache.put(filePath, responseToCache);
-                console.log(`Successfully fetched and cached ${selectedFile}.`);
-                */
-                // ----------------------------------
-
-                const audioData = await response.arrayBuffer(); 
-                console.log(`Fetched ${selectedFile} (via SW/Network), size: ${audioData.byteLength}.`);
-                handleAudioDataLoad(audioData, selectedFile);
-
-                const chooseFileButton = document.getElementById('choose-local-file-button');
-                if (chooseFileButton) {
-                    chooseFileButton.textContent = 'Load File'; 
-                }
-
             } catch (error) {
-                console.error(`Error loading preloaded file ${selectedFile}:`, error);
+                console.error(`[Preload Select] Error loading file ${selectedFile}:`, error);
+                 clearOverlayTimeout(); // Ensure timeout is cleared on error
+                 hideLoadingOverlay(); // Hide overlay on error
                 updateButtonState(uiControls.playPauseFileButton, false, true); 
                  const infoDisplay = document.getElementById('file-info-display');
                  if (infoDisplay) {
@@ -293,8 +299,10 @@ document.addEventListener('DOMContentLoaded', () => {
                      playbackRateSlider.disabled = true;
                  }
             } finally {
-                 clearOverlayTimeout(); 
-                 hideLoadingOverlay(); 
+                 // This finally block might hide the overlay too soon if fetch succeeded 
+                 // Let hideLoadingOverlay be handled within the try/catch blocks where needed
+                 // clearOverlayTimeout(); 
+                 // hideLoadingOverlay(); 
             }
         } else {
             // Handle case where "-- Select a file --" is chosen
