@@ -1,3 +1,5 @@
+console.log('[Service Worker] Script loaded');
+
 const APP_SHELL_CACHE_NAME = 'app-shell-cache-v1';
 const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache name
 
@@ -48,19 +50,19 @@ self.addEventListener('install', event => {
                     // Check if already in cache (e.g., from previous install/fetch)
                     const cachedResponse = await audioCache.match(filePath);
                     if (!cachedResponse) {
-                        // console.log(`[Service Worker] Caching audio: ${filename}`);
+                        console.log(`[Service Worker] Caching audio: ${filename}`);
                         // Use cache: 'reload' to ensure we get a fresh copy if needed, 
                         // though addAll in app shell should handle this for the list itself.
                         const networkResponse = await fetch(filePath, { cache: 'reload' }); 
                         if (networkResponse.ok) {
                             await audioCache.put(filePath, networkResponse);
                             audioCachedCount++;
-                            // console.log(`[Service Worker] Successfully cached audio: ${filename}`);
+                            console.log(`[Service Worker] Successfully cached audio: ${filename}`);
                         } else {
                              console.warn(`[Service Worker] Failed to fetch audio ${filename} for caching, status: ${networkResponse.status}`);
                         }
                     } else {
-                         // console.log(`[Service Worker] Audio already cached: ${filename}`);
+                         console.log(`[Service Worker] Audio already cached: ${filename}`);
                     }
                 } catch (err) {
                     console.error(`[Service Worker] Error caching audio file ${filename}:`, err);
