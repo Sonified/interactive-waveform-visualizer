@@ -67,26 +67,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- End Service Worker Registration ---
     
-    // === Show Initializing Overlay & Start Animation (Only if not controlled by SW) ===
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
     
     // Check if a Service Worker is controlling the page
-    if (!navigator.serviceWorker.controller) {
-        console.log('[DOMContentLoaded] No active Service Worker controller found. Showing initializing overlay.');
-        if (initOverlay && initTextElement) {
-            initOverlay.style.display = 'flex'; 
-            let dotCount = 0; // Start with 0 dots
-            const baseText = "Initializing Visualizer";
-            initializingIntervalId = setInterval(() => {
-                initTextElement.textContent = baseText + ".".repeat(dotCount);
-                dotCount = (dotCount + 1) % 4; // Cycle 0, 1, 2, 3
-            }, 300); // Update every 300ms (faster)
+    if (navigator.serviceWorker.controller) {
+        // CACHED LOAD: SW is active, fade out immediately
+        console.log('[DOMContentLoaded] Active SW controller. Fading out overlay immediately.');
+        if (initOverlay) {
+            initOverlay.classList.add('fade-out');
+            // Set display: none after fade completes
+            setTimeout(() => {
+                 if (initOverlay) { // Check again inside timeout
+                    initOverlay.style.display = 'none';
+                    initOverlay.classList.remove('fade-out');
+                 }
+            }, 500); // Matches CSS transition duration
         }
     } else {
-        console.log('[DOMContentLoaded] Active Service Worker controller found. Skipping initializing overlay.');
+        // FIRST LOAD: No SW controller, start animation
+        console.log('[DOMContentLoaded] No active SW controller. Starting initializing animation.');
+        if (initOverlay && initTextElement) { 
+            let dotCount = 0; 
+            const baseText = "Initializing Visualizer";
+            if (initializingIntervalId) clearInterval(initializingIntervalId); 
+            initializingIntervalId = setInterval(() => {
+                initTextElement.textContent = baseText + ".".repeat(dotCount);
+                dotCount = (dotCount + 1) % 4; 
+            }, 300); 
+        } else {
+            console.warn('[DOMContentLoaded] Could not find overlay elements for first load animation.');
+        }
     }
-    // ================================
+    // ========================================================
 
     // Define objects containing references from config.js
     const canvasRefs = {
@@ -166,28 +179,33 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[setTimeout Callback] Deferred AudioContext initialization failed, cannot draw axes.");
         }
         
-        // === Stop Animation & Initiate Fade Out ===
-        if (initializingIntervalId) {
+        // === Trigger Delayed Hide (Only if Overlay wasn't hidden immediately) ===
+        // This logic now primarily runs on the *first load* path
+        if (initializingIntervalId) { // Check if interval was started (i.e., first load path)
             clearInterval(initializingIntervalId);
             initializingIntervalId = null;
             console.log('[setTimeout Callback] Stopped initializing animation.');
         }
         
-        if (initOverlay) {
-            console.log('[setTimeout Callback] Starting overlay fade-out sequence.');
+        const overlayToHide = document.getElementById('initializing-overlay'); 
+        // Check if overlay is still visible (it might have been hidden by the immediate fade)
+        if (overlayToHide && overlayToHide.style.display !== 'none') { 
+            console.log('[setTimeout Callback] Starting *delayed* overlay fade-out sequence.');
             // Wait 500ms before starting fade
             setTimeout(() => {
-                console.log('[Overlay Fade] Adding fade-out class.');
-                initOverlay.classList.add('fade-out'); 
+                console.log('[Overlay Delayed Fade] Adding fade-out class.');
+                overlayToHide.classList.add('fade-out'); 
                 
-                // Wait for fade transition (500ms) + small buffer before hiding
+                // Wait for fade transition (500ms) before hiding
                 setTimeout(() => {
-                    console.log('[Overlay Fade] Setting display: none and removing class.');
-                    initOverlay.style.display = 'none';
-                    initOverlay.classList.remove('fade-out'); // Cleanup
+                    console.log('[Overlay Delayed Fade] Setting display: none and removing class.');
+                    overlayToHide.style.display = 'none';
+                    overlayToHide.classList.remove('fade-out'); // Cleanup
                 }, 500); // Matches CSS transition duration
 
             }, 500); // Initial delay before fade starts
+        } else {
+            console.log('[setTimeout Callback] Overlay likely already hidden or fading.');
         }
         // ===========================================
 
