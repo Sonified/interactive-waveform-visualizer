@@ -324,5 +324,6 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
 *   **Requirement:** Prevent the entire page from scrolling using trackpad gestures (or other means) to make the application feel more like a static desktop app.
 *   **Goal:** Allow future implementation of custom scroll/zoom behaviors *within* specific visualizer elements (like canvases) by handling `wheel` events directly, without the main page interfering.
 *   **Implementation:** Added `overflow: hidden;`, `height: 100%;`, `width: 100%;`, and `padding: 0;` to the `html, body` CSS rule in `index.html`.
-*   **Result:** Default browser scrolling for the main page is now disabled.
+*   **Layout Refinement:** Adding `overflow: hidden` caused right-side content to hang off the page due to body padding. Added `* { box-sizing: border-box; }` CSS rule to ensure padding is included within element widths, resolving the layout issue.
+*   **Result:** Default browser scrolling for the main page is now disabled, and the overall layout respects the viewport boundaries.
 

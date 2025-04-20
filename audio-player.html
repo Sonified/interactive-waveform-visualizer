@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixed Folder Drop Player</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #drop-area {
+            border: 3px dashed #0077cc;
+            border-radius: 8px;
+            padding: 50px;
+            text-align: center;
+            margin: 30px 0;
+            transition: all 0.3s;
+            background-color: #f0f8ff;
+        }
+        #drop-area.highlight {
+            background-color: #d0e8ff;
+            border-color: #005fa3;
+        }
+        #playlist {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        #playlist li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        #playlist li:hover {
+            background-color: #f5f5f5;
+        }
+        #playlist li.active {
+            background-color: #e0f0ff;
+            font-weight: bold;
+        }
+        #debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        #status-message {
+            margin-top: 20px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fixed Folder Drop Player</h1>
+    
+    <div id="drop-area">
+        <h2>Drop an Audio Folder Here</h2>
+        <p>Drag and drop a folder containing audio files</p>
+    </div>
+    
+    <div id="status-message">Ready - drop a folder to begin</div>
+    
+    <audio id="audio-player" controls style="width: 100%; margin: 20px 0;"></audio>
+    
+    <ul id="playlist"></ul>
+    
+    <div id="debug">Debug info will appear here...</div>
+
+    <script>
+        // Elements
+        const dropArea = document.getElementById('drop-area');
+        const audioPlayer = document.getElementById('audio-player');
+        const playlist = document.getElementById('playlist');
+        const debugArea = document.getElementById('debug');
+        const statusMessage = document.getElementById('status-message');
+        
+        // Audio files
+        let audioFiles = [];
+        let currentTrackIndex = -1;
+        let pendingFileOperations = 0;
+        
+        // Debug function
+        function debug(message) {
+            debugArea.textContent += message + '\n';
+            debugArea.scrollTop = debugArea.scrollHeight; // Auto-scroll
+            console.log(message);
+        }
+        
+        // Prevent defaults for drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // Highlight drop area when dragging over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('highlight');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('highlight');
+        }
+        
+        // Handle drop
+        dropArea.addEventListener('drop', function(e) {
+            debug('Drop event detected');
+            statusMessage.textContent = 'Processing folder...';
+            
+            const items = e.dataTransfer.items;
+            debug(`Drop items count: ${items.length}`);
+            
+            // Clear previous files
+            audioFiles = [];
+            pendingFileOperations = 0;
+            
+            let foundDirectory = false;
+            
+            // Process dropped items
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                debug(`Item ${i}: kind = ${item.kind}, type = ${item.type}`);
+                
+                if (item.kind === 'file') {
+                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                    
+                    if (entry) {
+                        debug(`Entry ${i}: isFile = ${entry.isFile}, isDirectory = ${entry.isDirectory}`);
+                        
+                        if (entry.isFile) {
+                            pendingFileOperations++;
+                            
+                            entry.file((file) => {
+                                debug(`Processing file: ${file.name}, type: ${file.type}`);
+                                
+                                if (file.type.startsWith('audio/')) {
+                                    audioFiles.push(file);
+                                    debug(`Added audio file: ${file.name}`);
+                                }
+                                
+                                pendingFileOperations--;
+                                checkCompletion();
+                            }, (error) => {
+                                debug(`Error processing file: ${error}`);
+                                pendingFileOperations--;
+                                checkCompletion();
+                            });
+                        } else if (entry.isDirectory) {
+                            foundDirectory = true;
+                            debug(`Processing directory: ${entry.name}`);
+                            pendingFileOperations++;
+                            processDirectoryEntry(entry);
+                        }
+                    } else {
+                        // Fallback for browsers without webkitGetAsEntry
+                        const file = item.getAsFile();
+                        if (file) {
+                            debug(`Fallback file: ${file.name}, type: ${file.type}`);
+                            
+                            if (file.type.startsWith('audio/')) {
+                                audioFiles.push(file);
+                                debug(`Added audio file: ${file.name}`);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!foundDirectory && items.length > 0) {
+                debug("No directories found in the drop. Did you drop files instead of a folder?");
+                statusMessage.textContent = "Please drop a folder, not individual files.";
+            }
+            
+            // In case there were no async operations started
+            checkCompletion();
+        });
+        
+        // Process directory
+        function processDirectoryEntry(directoryEntry, path = '') {
+            const dirReader = directoryEntry.createReader();
+            
+            function readEntries() {
+                dirReader.readEntries((entries) => {
+                    if (entries.length === 0) {
+                        pendingFileOperations--;
+                        checkCompletion();
+                        return;
+                    }
+                    
+                    // Process this batch of entries
+                    for (const entry of entries) {
+                        if (entry.isFile) {
+                            pendingFileOperations++;
+                            
+                            entry.file((file) => {
+                                if (file.type.startsWith('audio/')) {
+                                    file.fullPath = path + file.name;
+                                    audioFiles.push(file);
+                                    debug(`Found audio file in directory: ${file.fullPath}`);
+                                }
+                                
+                                pendingFileOperations--;
+                                checkCompletion();
+                            }, (error) => {
+                                debug(`Error accessing file: ${error}`);
+                                pendingFileOperations--;
+                                checkCompletion();
+                            });
+                        } else if (entry.isDirectory) {
+                            pendingFileOperations++;
+                            processDirectoryEntry(entry, `${path}${entry.name}/`);
+                        }
+                    }
+                    
+                    // Continue reading (directories might have more entries than can be read at once)
+                    readEntries();
+                }, (error) => {
+                    debug(`Error reading directory: ${error}`);
+                    pendingFileOperations--;
+                    checkCompletion();
+                });
+            }
+            
+            readEntries();
+        }
+        
+        // Check if all file operations are complete
+        function checkCompletion() {
+            debug(`Pending operations: ${pendingFileOperations}`);
+            
+            if (pendingFileOperations <= 0) {
+                debug(`All file operations complete. Total audio files found: ${audioFiles.length}`);
+                statusMessage.textContent = `Found ${audioFiles.length} audio files`;
+                
+                if (audioFiles.length > 0) {
+                    // Sort files by name
+                    audioFiles.sort((a, b) => a.name.localeCompare(b.name));
+                    updatePlaylist();
+                    playTrack(0);
+                }
+            }
+        }
+        
+        // Update playlist
+        function updatePlaylist() {
+            playlist.innerHTML = '';
+            
+            audioFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.textContent = file.name;
+                
+                li.addEventListener('click', () => {
+                    playTrack(index);
+                });
+                
+                if (index === currentTrackIndex) {
+                    li.classList.add('active');
+                }
+                
+                playlist.appendChild(li);
+            });
+            
+            debug(`Playlist updated with ${audioFiles.length} tracks`);
+        }
+        
+        // Play a track
+        function playTrack(index) {
+            if (index < 0 || index >= audioFiles.length) return;
+            
+            currentTrackIndex = index;
+            debug(`Playing track ${index}: ${audioFiles[index].name}`);
+            
+            // Revoke previous object URL if exists
+            if (audioPlayer.src && audioPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(audioPlayer.src);
+            }
+            
+            const file = audioFiles[index];
+            const objectUrl = URL.createObjectURL(file);
+            
+            audioPlayer.src = objectUrl;
+            audioPlayer.play().catch(error => {
+                debug(`Error playing audio: ${error.message}`);
+            });
+            
+            // Update playlist
+            const items = playlist.getElementsByTagName('li');
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('active');
+            }
+            
+            if (items[index]) {
+                items[index].classList.add('active');
+            }
+            
+            statusMessage.textContent = `Now playing: ${file.name}`;
+        }
+        
+        // Handle end of track
+        audioPlayer.addEventListener('ended', () => {
+            if (currentTrackIndex < audioFiles.length - 1) {
+                playTrack(currentTrackIndex + 1);
+            }
+        });
+        
+        // Initial message
+        debug('Page loaded. Drop a folder with audio files.');
+    </script>
+</body>
+</html>
