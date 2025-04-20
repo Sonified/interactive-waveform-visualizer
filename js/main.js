@@ -54,7 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Service Worker Registration ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
+            // Correct path for GitHub Pages deployment
+            const swPath = '/interactive-waveform-visualizer/service-worker.js'; 
+            navigator.serviceWorker.register(swPath) 
                 .then(registration => {
                     console.log('Service Worker registered with scope:', registration.scope);
                 })
