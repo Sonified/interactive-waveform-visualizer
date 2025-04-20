@@ -5,7 +5,7 @@ const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache nam
 const appShellFiles = [
     '/', // Alias for index.html
     'index.html',
-    'manifest.json', // Good practice to cache if you have one (we might add later)
+    // 'manifest.json', // Good practice to cache if you have one (we might add later) - REMOVED as likely missing
     'favicon.ico', 
     'Images/Waveform_Visualizer_Icon_v2.png',
     // Add main CSS/JS modules
@@ -24,10 +24,21 @@ self.addEventListener('install', event => {
     event.waitUntil((async () => {
         try {
             // 1. Cache App Shell
-            console.log('[Service Worker] Caching App Shell...');
+            console.log('[Service Worker] Caching App Shell individually...');
             const appCache = await caches.open(APP_SHELL_CACHE_NAME);
-            await appCache.addAll(appShellFiles);
-            console.log('[Service Worker] App Shell cached successfully.');
+            let shellCachedCount = 0;
+            let shellFailedCount = 0;
+            for (const file of appShellFiles) {
+                try {
+                    console.log(`[Service Worker] Attempting to cache: ${file}`);
+                    await appCache.add(file); // Try to cache one file
+                    shellCachedCount++;
+                } catch (err) {
+                    console.warn(`[Service Worker] Failed to cache app shell file: ${file}`, err);
+                    shellFailedCount++;
+                }
+            }
+            console.log(`[Service Worker] App Shell caching attempt complete. Cached: ${shellCachedCount}, Failed: ${shellFailedCount}`);
 
             // 2. Cache Audio Files (Prioritized)
             console.log('[Service Worker] Fetching audio file list for caching...');
@@ -48,19 +59,19 @@ self.addEventListener('install', event => {
                     // Check if already in cache (e.g., from previous install/fetch)
                     const cachedResponse = await audioCache.match(filePath);
                     if (!cachedResponse) {
-                        // console.log(`[Service Worker] Caching audio: ${filename}`);
+                        console.log(`[Service Worker] Caching audio: ${filename}`);
                         // Use cache: 'reload' to ensure we get a fresh copy if needed, 
                         // though addAll in app shell should handle this for the list itself.
                         const networkResponse = await fetch(filePath, { cache: 'reload' }); 
                         if (networkResponse.ok) {
                             await audioCache.put(filePath, networkResponse);
                             audioCachedCount++;
-                            // console.log(`[Service Worker] Successfully cached audio: ${filename}`);
+                            console.log(`[Service Worker] Successfully cached audio: ${filename}`);
                         } else {
                              console.warn(`[Service Worker] Failed to fetch audio ${filename} for caching, status: ${networkResponse.status}`);
                         }
                     } else {
-                         // console.log(`[Service Worker] Audio already cached: ${filename}`);
+                         console.log(`[Service Worker] Audio already cached: ${filename}`);
                     }
                 } catch (err) {
                     console.error(`[Service Worker] Error caching audio file ${filename}:`, err);
