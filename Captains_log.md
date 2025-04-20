@@ -397,3 +397,16 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
         *   `release`: 0.100 s (100 ms) - *Increased from 50ms to reduce audible pumping.*
 *   **Result:** The limiter prevents the final output signal from exceeding -2 dBFS, avoiding harsh digital clipping and replacing it with less noticeable limiting/compression when signals are very loud. The increased release time provides a smoother response.
 
+## Service Worker Reintegration & Merge Conflict Resolution (temp-sw-fixes)
+
+*   **Goal:** Reintroduce and fix the Service Worker functionality, which had been previously removed on the `main` branch during unrelated refactoring, while incorporating other updates (like audio caching) from the `audio-cache-test` branch.
+*   **Branch Strategy:**
+    1.  Merged `audio-cache-test` into `main` to bring in general caching improvements.
+    2.  Created a temporary branch `temp-sw-fixes` off `main` to specifically address the Service Worker.
+    3.  In `temp-sw-fixes`, the `service-worker.js` file (which had been deleted on `main`) was reintroduced and modified (e.g., for audio caching priorities).
+*   **Merge Conflict:** When merging `temp-sw-fixes` back into `main`, a conflict arose for `service-worker.js`:
+    *   `main` (HEAD): File deleted.
+    *   `temp-sw-fixes`: File modified.
+*   **Resolution:** The conflict was resolved by choosing the version from `temp-sw-fixes` (`git add service-worker.js`), effectively overriding the deletion on `main` and keeping the necessary Service Worker file.
+*   **Outcome:** `temp-sw-fixes` was successfully merged into `main`, incorporating the restored and updated `service-worker.js`.
+

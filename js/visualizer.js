@@ -447,8 +447,13 @@ export function resizeCanvases(canvasRefs, controls) {
     const targetHeightPerVis = Math.max(10, availableHeight / 3 - controlsApproxHeight); // Rough target height per visualizer row, minimum 10px
     const minWaveformHeight = defaultWaveformHeight * minHeightFactor;
     const minSpectrogramHeight = defaultSpectrogramHeight * minHeightFactor;
-    const finalWaveformHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
-    console.log(`[resizeCanvases] finalWaveformHeight = Math.round(Math.max(${minWaveformHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) - 45 = ${finalWaveformHeight}`); // Log Waveform calculation
+    
+    // Calculate base responsive height, including adjustment
+    const calculatedHeight = Math.round(Math.max(minWaveformHeight, targetHeightPerVis)) - 45;
+    // NOW enforce the 16px minimum
+    const finalWaveformHeight = Math.max(160, calculatedHeight);
+    console.log(`[resizeCanvases] finalWaveformHeight = Math.max(200, ${calculatedHeight}) = ${finalWaveformHeight}`); // Updated Log (200)
+
     const finalSpectrogramHeight = Math.round(Math.max(minSpectrogramHeight, targetHeightPerVis)) + 100; //THIS is how we change the height of the spectrogram
     console.log(`[resizeCanvases] finalSpectrogramHeight = Math.round(Math.max(${minSpectrogramHeight.toFixed(1)}, ${targetHeightPerVis.toFixed(1)})) + 100 = ${finalSpectrogramHeight}`); // Log Spectrogram calculation
     console.log(`[resizeCanvases] Calculated Final Heights - Waveform: ${finalWaveformHeight}, Spectrogram: ${finalSpectrogramHeight}`); // Log Final Calculated Heights
@@ -466,8 +471,16 @@ export function resizeCanvases(canvasRefs, controls) {
         // ✨ Apply calculated height ✨
         if (canvas.id.includes('spectrogram')) {
             canvas.height = finalSpectrogramHeight;
-        } else {
+            // Set min-height on the parent wrapper for spectrogram (JS override for this specific case)
+            if (canvas.parentElement && canvas.parentElement.classList.contains('main-canvas-wrapper')) {
+                canvas.parentElement.style.minHeight = `${finalSpectrogramHeight}px`;
+            }
+        } else { // Waveform canvases
             canvas.height = finalWaveformHeight;
+            // REMOVED: Let the CSS rule '.main-canvas-wrapper { min-height: 300px; }' handle waveform wrappers.
+            // if (canvas.parentElement && canvas.parentElement.classList.contains('main-canvas-wrapper')) {
+            //     canvas.parentElement.style.minHeight = `${finalWaveformHeight}px`; 
+            // }
         }
             
         // Get main contexts if not already obtained - Assign to GLOBAL vars
