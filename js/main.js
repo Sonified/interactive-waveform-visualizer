@@ -42,7 +42,7 @@ let instantaneousWaveformAxisCtx = null;
 let scrollingWaveformAxisCtx = null;
 
 // Define cache name globally or within the scope where needed
-// const AUDIO_CACHE_NAME = 'audio-cache-v1'; // REMOVED - Handled by SW
+const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Define cache name
 
 // --- REMOVE Function to precache audio files ---
 /* 
@@ -51,21 +51,23 @@ async function precacheAudioFiles() { ... function content removed ... }
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Service Worker Registration ---
+    // --- REMOVED: Service Worker Registration Block ---
+    /*
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // Correct path for GitHub Pages deployment
-            const swPath = '/interactive-waveform-visualizer/service-worker.js'; 
+            // Correct path for root deployment (likely better for local dev too)
+            const swPath = '/service-worker.js'; 
             navigator.serviceWorker.register(swPath) 
                 .then(registration => {
-                    console.log('Service Worker registered with scope:', registration.scope);
+                    console.log('[Service Worker] registered with scope:', registration.scope);
                 })
                 .catch(error => {
                     console.error('Service Worker registration failed:', error);
                 });
         });
     }
-    // --- End Service Worker Registration ---
+    */
+    // --- End REMOVED: Service Worker Registration Block ---
     
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
@@ -341,4 +343,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // === REMOVE Call to precacheAudioFiles ===
     // precacheAudioFiles(); 
     // ========================================
+
+    // === Function to Cache Preloaded Audio Files ===
+    async function cachePreloadedAudio() {
+        console.log('[Main Script] Starting preloaded audio caching...');
+        try {
+            console.log('[Main Script] Fetching audio_files.json...');
+            const response = await fetch('audio_files.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error fetching audio_files.json! status: ${response.status}`);
+            }
+            const audioFilesList = await response.json();
+            console.log(`[Main Script] Found ${audioFilesList.length} audio files listed.`);
+
+            const audioCache = await caches.open(AUDIO_CACHE_NAME);
+            console.log(`[Main Script] Opened audio cache: ${AUDIO_CACHE_NAME}`);
+
+            let newlyCachedCount = 0;
+            const cachePromises = audioFilesList.map(async (filename) => {
+                const filePath = `Audio_Files/${filename}`;
+                try {
+                    const cachedResponse = await audioCache.match(filePath);
+                    if (!cachedResponse) {
+                        console.log(`[Main Script] Caching audio: ${filename}`);
+                        const networkResponse = await fetch(filePath);
+                        if (networkResponse.ok) {
+                            await audioCache.put(filePath, networkResponse.clone()); // Clone response for caching
+                            newlyCachedCount++;
+                            console.log(`[Main Script] Successfully cached: ${filename}`);
+                        } else {
+                            console.warn(`[Main Script] Failed to fetch ${filename} for caching, status: ${networkResponse.status}`);
+                        }
+                    } else {
+                        // console.log(`[Main Script] Audio already cached: ${filename}`); // Optional: Log if needed
+                    }
+                } catch (err) {
+                    console.error(`[Main Script] Error caching file ${filename}:`, err);
+                }
+            });
+
+            await Promise.all(cachePromises);
+            console.log(`[Main Script] Finished audio caching check. Newly cached: ${newlyCachedCount}`);
+
+        } catch (error) {
+            console.error('[Main Script] Audio precaching failed:', error);
+        }
+    }
+    // ==============================================
+
+    // === Call the Caching Function ===
+    // Call it after other setup, but let it run async
+    cachePreloadedAudio();
+    // =================================
 }); 
