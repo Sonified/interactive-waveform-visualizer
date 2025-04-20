@@ -130,8 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Call functions with explicit dependencies
     // Capture the returned contexts from the initial resize
+    console.log("[DOMContentLoaded] Initial resizeCanvases call..."); // Log Initial Resize Call
     const initialContexts = resizeCanvases(canvasRefs, uiControls);
-    window.addEventListener('resize', () => resizeCanvases(canvasRefs, uiControls)); // Resize doesn't need return value here
+    console.log("[DOMContentLoaded] Adding window resize listener..."); // Log Adding Resize Listener
+    window.addEventListener('resize', () => {
+        console.log("[Window Resize Event] Triggering resizeCanvases..."); // Log Resize Event Trigger
+        resizeCanvases(canvasRefs, uiControls);
+    }); // Resize doesn't need return value here
     detectAudioFormatSupport(uiControls.browserFormatsSpan); // Pass specific element
     setupUIEventListeners(uiControls); 
     initializeUIValues(uiControls); 
@@ -140,13 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Explicitly initialize the AudioContext and analysers on load
     // Wrap in setTimeout to defer execution slightly, resolving potential timing issues
+    console.log("[DOMContentLoaded] Setting timeout for AudioContext initialization and axis draw..."); // Log Setting Timeout
     setTimeout(() => {
+        console.log("[setTimeout Callback] Initializing AudioContext..."); // Log Timeout Callback Start
         const localAudioContext = initializeAudioContext(); // Get context directly
 
         // === NEW: Explicitly Draw Axes After AudioContext is Ready ===
         // Use the contexts captured from the initial resizeCanvases call
         if (localAudioContext) { 
-            console.log("Attempting deferred axis draw. Contexts available:", {
+            console.log("[setTimeout Callback] Attempting deferred axis draw. Contexts available:", {
                 specA: !!initialContexts.spectrogramAxisCtx,
                 instA: !!initialContexts.instantaneousWaveformAxisCtx,
                 scrollA: !!initialContexts.scrollingWaveformAxisCtx
@@ -154,12 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // Note: Axis drawing functions implicitly use the exported audioContext from audio.js,
             // but the check here ensures we only call them if initialization succeeded.
             // Check the captured contexts before drawing
-            if (initialContexts.spectrogramAxisCtx) drawSpectrogramAxis();
-            if (initialContexts.instantaneousWaveformAxisCtx) drawInstantaneousWaveformAxis(uiControls);
-            if (initialContexts.scrollingWaveformAxisCtx) drawScrollingWaveformAxis(uiControls);
-            console.log("Explicitly drew axes after AudioContext initialization (deferred).");
+            if (initialContexts.spectrogramAxisCtx) {
+                console.log("[setTimeout Callback] Calling drawSpectrogramAxis..."); // Log Draw Spectrogram Axis
+                drawSpectrogramAxis();
+            }
+            if (initialContexts.instantaneousWaveformAxisCtx) {
+                 console.log("[setTimeout Callback] Calling drawInstantaneousWaveformAxis..."); // Log Draw Inst Waveform Axis
+                drawInstantaneousWaveformAxis(uiControls);
+            }
+            if (initialContexts.scrollingWaveformAxisCtx) {
+                 console.log("[setTimeout Callback] Calling drawScrollingWaveformAxis..."); // Log Draw Scroll Waveform Axis
+                drawScrollingWaveformAxis(uiControls);
+            }
+            console.log("[setTimeout Callback] Explicitly drew axes after AudioContext initialization (deferred).");
         } else {
-            console.error("Deferred AudioContext initialization failed, cannot draw axes.");
+            console.error("[setTimeout Callback] Deferred AudioContext initialization failed, cannot draw axes.");
         }
         // =============================================================
     }, 0); // Delay of 0ms
