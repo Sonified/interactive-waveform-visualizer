@@ -62,15 +62,25 @@ export function initializeAudioContext() {
             if (!fileGainNode) { 
                 fileGainNode = audioContext.createGain();
                 fileGainNode.connect(masterGainNode);
-                console.log("FileGainNode created and connected to MasterGainNode.");
+                // console.log("FileGainNode created and connected to MasterGainNode.");
             }
+
+            // --- Create and configure Limiter ---
+            const limiter = audioContext.createDynamicsCompressor();
+            limiter.threshold.setValueAtTime(-2.0, audioContext.currentTime); // Limit peaks above -2dBFS
+            limiter.knee.setValueAtTime(0, audioContext.currentTime);      // Hard knee
+            limiter.ratio.setValueAtTime(20.0, audioContext.currentTime);   // 20:1 ratio (strong limiting)
+            limiter.attack.setValueAtTime(0.003, audioContext.currentTime); // Fast attack (3ms)
+            limiter.release.setValueAtTime(0.100, audioContext.currentTime); // Slower release (100ms) to reduce pumping
+            console.log("Limiter node created and configured.");
+            // ----------------------------------
 
             // Spectrogram Analyser (controlled by dropdown)
             analyser = audioContext.createAnalyser();
             analyser.fftSize = parseInt(windowSizeSelect.value);
             console.log(`Audio Init: Spectrogram analyser created. Initial FFT: ${analyser.fftSize}`);
-            masterGainNode.connect(analyser);
-            analyser.connect(audioContext.destination); // Still connect main analyser to output
+            // masterGainNode.connect(analyser);
+            // analyser.connect(audioContext.destination); // Will be reconnected after limiter
 
             // Waveform Analyser (independent, with its own controls)
             waveformAnalyser = audioContext.createAnalyser();
@@ -79,7 +89,7 @@ export function initializeAudioContext() {
             waveformAnalyser.maxDecibels = analyser.maxDecibels;
             waveformAnalyser.fftSize = parseInt(waveformWindowSizeSelect.value);
             console.log(`Audio Init: Waveform analyser created. Initial FFT: ${waveformAnalyser.fftSize}`);
-            masterGainNode.connect(waveformAnalyser);
+            // masterGainNode.connect(waveformAnalyser); // Will be reconnected after limiter
 
             // Scrolling Waveform Analyser (independent, fixed FFT)
             scrollingAnalyser = audioContext.createAnalyser();
@@ -87,8 +97,22 @@ export function initializeAudioContext() {
             scrollingAnalyser.minDecibels = analyser.minDecibels;
             scrollingAnalyser.maxDecibels = analyser.maxDecibels;
             scrollingAnalyser.fftSize = 4096; // Fixed FFT size for consistent scrolling data
-            masterGainNode.connect(scrollingAnalyser); // Connect in parallel
-            // scrollingAnalyser also does NOT connect to destination
+            // masterGainNode.connect(scrollingAnalyser); // Will be reconnected after limiter
+
+            // --- Modify Connections ---
+            // Disconnect masterGain from any previous destinations (it may not have any yet, but safe)
+            masterGainNode.disconnect(); 
+
+            // Connect masterGain -> limiter
+            masterGainNode.connect(limiter);
+
+            // Connect limiter -> analysers (in parallel) AND destination
+            limiter.connect(analyser);
+            limiter.connect(waveformAnalyser);
+            limiter.connect(scrollingAnalyser);
+            limiter.connect(audioContext.destination);
+            console.log("Audio graph reconnected: masterGain -> limiter -> (analysers & destination)");
+            // --- End Modify Connections ---
 
             console.log("AudioContext initialized. Sample Rate:", audioContext.sampleRate);
             return audioContext; // Return newly created context
@@ -260,7 +284,7 @@ export function stopGeneratedAudio() {
 // --- Preview Audio Functions ---
 export function startPreviewOscillator() {
     if (!audioContext || isGeneratedPlaying || isPreviewing) return; // Don't start if playing or already previewing
-    console.log("Starting oscillator preview...");
+    // console.log("Starting oscillator preview...");
     isPreviewing = true;
     const targetAmplitude = parseFloat(amplitudeSlider.value);
     const fadeTime = 0.015;
@@ -284,7 +308,7 @@ export function startPreviewOscillator() {
 
 export function startPreviewNoise() {
     if (!audioContext || isGeneratedPlaying || isPreviewing) return; // Don't start if playing or already previewing
-    console.log("Starting noise preview...");
+    // console.log("Starting noise preview...");
     isPreviewing = true;
     const targetNoiseLevel = parseFloat(noiseLevelSlider.value);
     const fadeTime = 0.015;
@@ -306,7 +330,7 @@ export function stopPreviewAudio(controls) {
         isPreviewing = false; 
         return; 
     }
-    console.log("Stopping preview audio...");
+    // console.log("Stopping preview audio...");
     const fadeTime = 0.015;
     const now = audioContext.currentTime;
     const stopDelay = fadeTime * 1000 + 5;
@@ -330,12 +354,12 @@ export function stopPreviewAudio(controls) {
         if (!isGeneratedPlaying) {
             if (currentOscillator && currentOscillator === oscillator) { 
                 try { currentOscillator.stop(); currentOscillator.disconnect(); } catch(e){} 
-                console.log("Preview Oscillator stopped.");
+                // console.log("Preview Oscillator stopped.");
                 oscillator = null;
             }
             if (currentNoiseSource && currentNoiseSource === noiseSource) { 
                 try { currentNoiseSource.stop(); currentNoiseSource.disconnect(); } catch(e){} 
-                console.log("Preview Noise source stopped.");
+                // console.log("Preview Noise source stopped.");
                 noiseSource = null;
             }
              // Stop visuals only if we stopped a preview and aren't playing
@@ -369,7 +393,7 @@ export function createNoiseSource(calledFromStart = false) {
     const bufferSize = audioContext.sampleRate * 2; // 2 seconds buffer
     const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
     const output = noiseBuffer.getChannelData(0);
-    console.log(`Generating ${noiseType} noise buffer...`);
+    // console.log(`Generating ${noiseType} noise buffer...`);
 
     // Noise generation logic (unchanged)
     if (noiseType === 'white') { for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1; }
@@ -387,12 +411,12 @@ export function createNoiseSource(calledFromStart = false) {
         const targetNoiseLevel = parseFloat(noiseLevelSlider.value);
         const fadeTime = 0.015; // 15ms fade 
         const now = audioContext.currentTime;
-        console.log("Fading in noise source independently.");
+        // console.log("Fading in noise source independently.");
         noiseGain.gain.setValueAtTime(0, now);
         noiseGain.gain.linearRampToValueAtTime(targetNoiseLevel, now + fadeTime);
     }
 
-    console.log("Noise source started.");
+    // console.log("Noise source started.");
 }
 export function stopNoiseSource() {
     // if (noiseSource) { try { noiseSource.stop(); noiseSource.disconnect(); } catch(e){} noiseSource = null; console.log("Noise source stopped."); } // Old immediate stop
@@ -402,7 +426,7 @@ export function stopNoiseSource() {
         const fadeTime = 0.015; // 15ms fade 
         const now = audioContext.currentTime;
         const stopDelay = fadeTime * 1000 + 5;
-        console.log("Fading out noise source independently...");
+        // console.log("Fading out noise source independently...");
 
         // Ramp down gain
         if (noiseGain) {
@@ -418,14 +442,14 @@ export function stopNoiseSource() {
                     currentNoiseNode.stop(); 
                     currentNoiseNode.disconnect(); 
                     noiseSource = null; // Clear reference only after successful stop
-                    console.log("Noise source stopped after independent fade.");
+                    // console.log("Noise source stopped after independent fade.");
                 } catch(e){ 
-                    console.error("Error stopping noise source after fade:", e);
+                    // console.error("Error stopping noise source after fade:", e);
                     // Still clear reference if stop fails but node matches
                     noiseSource = null;
                 }
             } else {
-                console.log("Noise source changed before independent fade could stop it.");
+                // console.log("Noise source changed before independent fade could stop it.");
             }
         }, stopDelay);
     } else {
@@ -484,7 +508,7 @@ export function handleFileLoad(event) {
             // Remove SR from the display string
             fileInfoDisplay.innerHTML = `<p>File: ${audioFileInput.files[0].name}</p><p>Duration: ${buffer.duration.toFixed(2)}s</p>`;
             updateButtonState(playPauseFileButton, false, false);
-            console.log("Audio file decoded.");
+            // console.log("Audio file decoded.");
             // Auto-play the file once it's decoded
             playAudioFile();
             // Update button state to reflect playing status
@@ -494,8 +518,8 @@ export function handleFileLoad(event) {
             const playbackRateSlider = document.getElementById('playback-rate');
             if (playbackRateSlider) {
                 playbackRateSlider.disabled = false; // Explicitly enable here
-                console.log("Playback rate slider ENABLED after local file decode.");
-                console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled); // <-- Log added
+                // console.log("Playback rate slider ENABLED after local file decode.");
+                // console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled);
             }
             // -----------------------------
         }).catch(err => { 
@@ -520,6 +544,11 @@ export function handleAudioDataLoad(audioData, fileName) {
             // Assign the decoded buffer
             audioBuffer = buffer;
 
+            // --- ADDED: Reset timing state for the NEW file --- 
+            fileStartTime = 0;
+            filePauseTime = 0;
+            // ----------------------------------------------------
+
             // Update file info display
             if (fileInfoDisplay) {
                 // --- REMOVE LOG BEFORE UPDATING DISPLAY ---
@@ -534,7 +563,7 @@ export function handleAudioDataLoad(audioData, fileName) {
             if (playbackRateSlider) {
                 playbackRateSlider.disabled = false;
             }
-            console.log(`Audio file decoded: ${fileName}`);
+            // console.log(`Audio file decoded: ${fileName}`);
             
             // Auto-play the file once it's decoded
             playAudioFile();
@@ -544,8 +573,8 @@ export function handleAudioDataLoad(audioData, fileName) {
             // --- Enable Playback Slider ---
             if (playbackRateSlider) {
                 playbackRateSlider.disabled = false; // Explicitly enable here
-                 console.log(`Playback rate slider ENABLED after preloaded/data decode for: ${fileName}`);
-                 console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled); // <-- Log added
+                 // console.log(`Playback rate slider ENABLED after preloaded/data decode for: ${fileName}`);
+                 // console.log("Slider disabled state AFTER explicit enable:", playbackRateSlider.disabled);
             } else {
                  console.error("Could not find playback rate slider to enable.");
             }
@@ -570,17 +599,17 @@ export function handleFileError() {
 }
 export function playAudioFile() {
     if (!audioContext || !audioBuffer) return; // Check context and buffer وجود 
-    console.log("Starting/Resuming file playback...");
+    // console.log("Starting/Resuming file playback...");
 
     let offset = 0;
     // Calculate offset if resuming from pause
     if (filePauseTime > 0 && fileStartTime > 0) {
         offset = (filePauseTime - fileStartTime);
-        console.log(`Resuming. StartTime: ${fileStartTime.toFixed(3)}, PauseTime: ${filePauseTime.toFixed(3)}, Raw Offset: ${offset.toFixed(3)}`);
+        // console.log(`Resuming. StartTime: ${fileStartTime.toFixed(3)}, PauseTime: ${filePauseTime.toFixed(3)}, Raw Offset: ${offset.toFixed(3)}`);
         offset = offset % audioBuffer.duration; // Wrap offset for looping buffer
-        console.log(`Modulo Offset: ${offset.toFixed(3)}`);
+        // console.log(`Modulo Offset: ${offset.toFixed(3)}`);
     } else {
-        console.log("Starting from beginning or after full stop.");
+        // console.log("Starting from beginning or after full stop.");
         offset = 0;
         // fileStartTime will be set below, after getting currentTime
     }
@@ -616,7 +645,7 @@ export function playAudioFile() {
         }
     };
 
-    console.log(`Starting buffer source with offset: ${offset.toFixed(3)}`);
+    // console.log(`Starting buffer source with offset: ${offset.toFixed(3)}`);
     audioSource.start(0, offset); // Start immediately at calculated offset
 
     filePauseTime = 0; // Reset pause time as we are now playing

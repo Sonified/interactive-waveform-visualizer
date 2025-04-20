@@ -96,7 +96,7 @@ export function setupThemeToggle(canvasRefs, uiControls) {
     console.log('Attempting to setup theme toggle. Button found:', themeToggleButton);
 
     if (themeToggleButton) {
-        console.log('Attaching theme toggle listener.'); // ✨ ADDED LOG ✨
+        // console.log('Attaching theme toggle listener.'); 
         themeToggleButton.addEventListener('change', () => {
             console.log('Theme checkbox changed!'); // ✨ ADDED LOG ✨
             const selectedTheme = themeToggleButton.checked ? 'midnight-blue' : 'light';
@@ -110,7 +110,7 @@ export function setupThemeToggle(canvasRefs, uiControls) {
 // Attaches event listeners to UI elements
 export function setupUIEventListeners(controls) {
     console.log("UI: Setting up event listeners..."); // <-- Log setup start
-    console.log("UI: Received controls object:", controls); // <-- ADD LOG TO INSPECT controls
+    // console.log("UI: Received controls object:", controls);
     const {
         playPauseGeneratedButton, playPauseFileButton, audioFileInput,
         waveformTypeSelect, frequencySlider, frequencyLogSlider, amplitudeSlider,
@@ -128,7 +128,7 @@ export function setupUIEventListeners(controls) {
     const restartFileButton = document.getElementById('restart-file-button');
 
     if (playPauseGeneratedButton) {
-        console.log("UI: Attaching listener to Generated Play/Pause button"); // <-- Add log
+        // console.log("UI: Attaching listener to Generated Play/Pause button");
         playPauseGeneratedButton.addEventListener('click', () => {
             console.log("UI: Generated Play/Pause button clicked");
             toggleGeneratedAudio(controls);
@@ -136,7 +136,7 @@ export function setupUIEventListeners(controls) {
     } else { console.warn("Generated Play/Pause button not found for listener."); }
 
     if (playPauseFileButton) {
-        console.log("UI: Attaching listener to File Play/Pause button"); // <-- Add log
+        // console.log("UI: Attaching listener to File Play/Pause button");
         playPauseFileButton.addEventListener('click', () => {
             console.log("UI: File Play/Pause button clicked");
             toggleFileAudio(controls);
@@ -144,7 +144,7 @@ export function setupUIEventListeners(controls) {
     } else { console.warn("File Play/Pause button not found for listener."); }
     
     if (restartFileButton) {
-        console.log("UI: Attaching listener to File Restart button"); // <-- Add log
+        // console.log("UI: Attaching listener to File Restart button");
         restartFileButton.addEventListener('click', () => {
             console.log("UI: File Restart button clicked");
             restartAudioFile(controls);
@@ -206,7 +206,7 @@ export function setupUIEventListeners(controls) {
     });
     waveformTypeSelect.addEventListener('change', updateOscillatorType);
     if (frequencySlider) {
-        console.log("UI: Attaching listener to Frequency slider"); // <-- Add log
+        // console.log("UI: Attaching listener to Frequency slider");
         frequencySlider.addEventListener('input', () => {
             // console.log("UI: Frequency slider input detected"); // Log already added in the function itself
             updateFrequency(controls);
@@ -352,7 +352,7 @@ export function detectAudioFormatSupport(spanElement) {
 
 // --- Update Handlers for Controls ---
 function updateFrequency(controls) {
-    console.log("UI: updateFrequency called"); // <-- Add log
+    // console.log("UI: updateFrequency called");
     const slider = controls.frequencySlider; 
     const linearFreq = parseInt(slider.value);
     controls.frequencyValue.textContent = linearFreq + 'Hz';
@@ -360,7 +360,15 @@ function updateFrequency(controls) {
     const logPosition = ((Math.log(Math.max(20, linearFreq)) - minLog) / (maxLog - minLog)) * 100;
     controls.frequencyLogSlider.value = logPosition; 
     controls.frequencyLogValue.textContent = linearFreq + 'Hz';
-    if (oscillator && audioContext) { oscillator.frequency.linearRampToValueAtTime(linearFreq, audioContext.currentTime + 0.02); }
+    if (oscillator && audioContext) { 
+        const targetFreq = linearFreq;
+        const timeConstant = 0.015; // Adjust for desired smoothness/responsiveness
+        const now = audioContext.currentTime;
+        oscillator.frequency.cancelScheduledValues(now);
+        // Use setTargetAtTime for smoother exponential change
+        oscillator.frequency.setTargetAtTime(targetFreq, now, timeConstant); 
+        // oscillator.frequency.linearRampToValueAtTime(linearFreq, audioContext.currentTime + 0.02);
+    }
 }
 function updateFrequencyLog(controls) {
      const slider = controls.frequencyLogSlider; 
@@ -371,13 +379,29 @@ function updateFrequencyLog(controls) {
      controls.frequencyLogValue.textContent = roundedFreq + 'Hz'; 
      controls.frequencyValue.textContent = roundedFreq + 'Hz'; 
      controls.frequencySlider.value = roundedFreq;
-     if (oscillator && audioContext) { oscillator.frequency.linearRampToValueAtTime(roundedFreq, audioContext.currentTime + 0.02); }
+     if (oscillator && audioContext) { 
+        const targetFreq = roundedFreq;
+        const timeConstant = 0.015; // Use the same time constant
+        const now = audioContext.currentTime;
+        oscillator.frequency.cancelScheduledValues(now);
+        // Use setTargetAtTime for smoother exponential change
+        oscillator.frequency.setTargetAtTime(targetFreq, now, timeConstant); 
+        // oscillator.frequency.linearRampToValueAtTime(roundedFreq, audioContext.currentTime + 0.02);
+     }
  }
 function updateAmplitude(controls) {
      const slider = controls.amplitudeSlider; 
      const ampValue = parseFloat(slider.value);
      controls.amplitudeValue.textContent = ampValue.toFixed(2);
-     if (oscillatorGain && audioContext) { oscillatorGain.gain.linearRampToValueAtTime(ampValue, audioContext.currentTime + 0.02); }
+     if (oscillatorGain && audioContext) { 
+        const targetGain = ampValue;
+        const timeConstant = 0.015; // Use the same time constant
+        const now = audioContext.currentTime;
+        oscillatorGain.gain.cancelScheduledValues(now);
+        // Use setTargetAtTime for smoother exponential change
+        oscillatorGain.gain.setTargetAtTime(targetGain, now, timeConstant); 
+        // oscillatorGain.gain.linearRampToValueAtTime(ampValue, audioContext.currentTime + 0.02);
+     }
  }
 function updateOscillatorType(event) { if (oscillator) { oscillator.type = event.target.value; } }
 function updateNoiseLevel(controls) {
@@ -696,7 +720,7 @@ export function updateLoadingProgress(loadedBytes, totalBytes) { // <-- Add expo
 }
 
 export function hideLoadingOverlay() { // <-- Add export
-    console.log("Hiding loading overlay");
+    // console.log("Hiding loading overlay");
     // Clear the tip interval
     if (tipIntervalId) {
         clearInterval(tipIntervalId);

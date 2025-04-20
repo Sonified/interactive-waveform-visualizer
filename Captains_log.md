@@ -375,3 +375,25 @@ Based on Robert's correction, the `position: relative; top: -5px;` CSS offset ap
     6.  Updated theme checks within JavaScript drawing functions (`js/visualizer.js`) to check `document.documentElement.classList.contains('midnight-blue')`.
 *   **Result:** The correct theme is applied before the initial page render, eliminating the flash of the light theme when the dark theme is active.
 
+## Smoother Slider Parameter Changes
+
+*   **Problem:** Rapidly dragging the frequency or amplitude sliders caused audible clicks or "zipper noise" distortion. This occurred because each `input` event triggered a new `linearRampToValueAtTime`, potentially creating discontinuities or abrupt changes in the rate of parameter change.
+*   **Solution:** Modified the `updateFrequency`, `updateFrequencyLog`, and `updateAmplitude` functions in `js/ui.js`.
+    1.  Added a call to `oscillator.frequency.cancelScheduledValues(now)` or `oscillatorGain.gain.cancelScheduledValues(now)` before applying the new value to clear any pending ramps.
+    2.  Replaced `linearRampToValueAtTime` with `setTargetAtTime(targetValue, now, timeConstant)`.
+    3.  Used a `timeConstant` of `0.015` for both frequency and amplitude, providing a smooth exponential approach to the target value without causing discontinuities when the target updates rapidly during slider dragging.
+*   **Result:** Dragging the frequency and amplitude sliders now results in smooth, artifact-free changes to the generated audio.
+
+## Output Limiter Implementation
+
+*   **Problem:** Combining loud audio sources (e.g., a normalized audio file and a high-amplitude generated sine wave) could cause the summed signal level to exceed the digital ceiling (0 dBFS), resulting in harsh clipping distortion.
+*   **Solution:** Added a `DynamicsCompressorNode` configured as a limiter to the audio graph in `js/audio.js` (`initializeAudioContext`).
+    1.  The node is inserted *after* the `masterGainNode` (where all sources sum) but *before* the final output (`audioContext.destination`) and the analyser nodes.
+    2.  Initial Limiter Settings:
+        *   `threshold`: -2.0 dBFS
+        *   `knee`: 0 dB (hard knee)
+        *   `ratio`: 20.0:1
+        *   `attack`: 0.003 s (3 ms)
+        *   `release`: 0.100 s (100 ms) - *Increased from 50ms to reduce audible pumping.*
+*   **Result:** The limiter prevents the final output signal from exceeding -2 dBFS, avoiding harsh digital clipping and replacing it with less noticeable limiting/compression when signals are very loud. The increased release time provides a smoother response.
+

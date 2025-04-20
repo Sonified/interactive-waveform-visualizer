@@ -44,15 +44,15 @@ export function startVisualization() {
     if (!analyser) return;
     if (!waveformAnimationId) {
         waveformAnimationId = requestAnimationFrame(drawInstantaneousWaveform);
-        console.log("Instantaneous Waveform loop started.");
+        // console.log("Instantaneous Waveform loop started.");
     }
     if (!scrollingWaveformAnimationId) {
         scrollingWaveformAnimationId = requestAnimationFrame(drawScrollingWaveform);
-        console.log("Scrolling Waveform loop started.");
+        // console.log("Scrolling Waveform loop started.");
     }
     if (!spectrogramAnimationId) {
         spectrogramAnimationId = requestAnimationFrame(drawSpectrogram);
-        console.log("Spectrogram loop started.");
+        // console.log("Spectrogram loop started.");
     }
     // Draw axis initially if context is ready
     if (spectrogramAxisCtx) {
@@ -62,27 +62,27 @@ export function startVisualization() {
     // Clear stored canvas image and reset scale when starting visualization
     lastScrollingCanvasImage = null; 
     lastScrollingCanvasScale = 1.0; // Reset scale too
-    console.log("Cleared stored scrolling waveform image and scale.");
+    // console.log("Cleared stored scrolling waveform image and scale.");
 }
 
 // Helper function to check state and stop visualization loops if inactive
 export function checkAndStopVisualization() {
     if (!isGeneratedPlaying && !isFilePlaying && !isPreviewing) {
-        console.log("All audio inactive, stopping visualization loops.");
+        // console.log("All audio inactive, stopping visualization loops.");
         if (waveformAnimationId) {
             cancelAnimationFrame(waveformAnimationId);
             waveformAnimationId = null;
-            console.log("Instantaneous Waveform loop stopped.");
+            // console.log("Instantaneous Waveform loop stopped.");
         }
         if (scrollingWaveformAnimationId) {
             cancelAnimationFrame(scrollingWaveformAnimationId);
             scrollingWaveformAnimationId = null;
-            console.log("Scrolling Waveform loop stopped.");
+            // console.log("Scrolling Waveform loop stopped.");
         }
         if (spectrogramAnimationId) {
             cancelAnimationFrame(spectrogramAnimationId);
             spectrogramAnimationId = null;
-            console.log("Spectrogram loop stopped.");
+            // console.log("Spectrogram loop stopped.");
         }
 
         // Store canvas image data and scale for scrolling waveform
@@ -93,20 +93,21 @@ export function checkAndStopVisualization() {
                  );
                  // Store the scale value at the time of pause
                  lastScrollingCanvasScale = parseFloat(scrollingScaleSlider.value); 
-                 console.log("Scrolling waveform canvas image captured with scale:", lastScrollingCanvasScale);
+                 // console.log("Scrolling waveform canvas image captured with scale:", lastScrollingCanvasScale);
              } catch (e) {
-                 console.error("Error capturing scrolling waveform canvas image:", e);
+                 // console.error("Error capturing scrolling waveform canvas image:", e);
                  lastScrollingCanvasImage = null; // Reset if capture fails
                  lastScrollingCanvasScale = 1.0;
              }
         } else {
-             console.warn("Could not capture scrolling waveform: context or canvas dimensions invalid.");
+             // console.warn("Could not capture scrolling waveform: context or canvas dimensions invalid.");
              lastScrollingCanvasImage = null;
              lastScrollingCanvasScale = 1.0;
         }
 
     } else {
-        console.log("Visualization continues (some audio source active).", {gen: isGeneratedPlaying, file: isFilePlaying, preview: isPreviewing});
+        // Comment out the verbose log
+        // console.log("Visualization continues (some audio source active).", {gen: isGeneratedPlaying, file: isFilePlaying, preview: isPreviewing});
     }
 }
 
@@ -120,12 +121,6 @@ function drawInstantaneousWaveform() {
     const bufferLength = waveformAnalyser.fftSize; 
     const dataArray = new Uint8Array(bufferLength);
     waveformAnalyser.getByteTimeDomainData(dataArray);
-
-    // DEBUG: Check if data is non-silent during file playback
-    if (isFilePlaying && !isGeneratedPlaying) {
-        const isSilent = dataArray.every(value => value === 128); // 128 is zero amplitude
-        if (isSilent) console.log("Waveform Analyser getting SILENT data during file playback.");
-    }
 
     // Store a copy of the current data for static redraw
     lastInstantaneousDataArray = new Uint8Array(dataArray);
@@ -209,7 +204,7 @@ function drawScrollingWaveform() {
         try {
             imageDataToShift = ctx.getImageData(scrollAmount, 0, canvasWidth - scrollAmount, canvasHeight);
         } catch (e) {
-            console.error("Error getting image data for shift:", e);
+            // console.error("Error getting image data for shift:", e);
             imageDataToShift = null; 
         }
     }
@@ -481,7 +476,8 @@ export function resizeCanvases(canvasRefs, controls) {
             spectrogramCtx = canvas.getContext('2d', { willReadFrequently: true }); // Keep optimization
         }
     });
-    console.log(`Resized main canvases`);
+    // Comment out the resize log
+    // console.log(`Resized main canvases`);
 
     // Axis canvases - Resize and get context if not already done
     [specAxis, instWfAxis, scrollWfAxis].forEach(axisCanvas => {
@@ -499,13 +495,13 @@ export function resizeCanvases(canvasRefs, controls) {
         // Get context if not already obtained - Assign to GLOBAL context vars
         if (axisCanvas.id === 'spectrogram-axis-canvas' && !spectrogramAxisCtx) {
             spectrogramAxisCtx = axisCanvas.getContext('2d');
-            console.log("VIS: SpectrogramAxisCtx obtained."); // <-- Log context acquisition
+            // console.log("VIS: SpectrogramAxisCtx obtained."); 
         } else if (axisCanvas.id === 'instantaneous-waveform-axis-canvas' && !instantaneousWaveformAxisCtx) {
             instantaneousWaveformAxisCtx = axisCanvas.getContext('2d');
-            console.log("VIS: InstantaneousWaveformAxisCtx obtained."); // <-- Log context acquisition
+            // console.log("VIS: InstantaneousWaveformAxisCtx obtained.");
         } else if (axisCanvas.id === 'scrolling-waveform-axis-canvas' && !scrollingWaveformAxisCtx) {
             scrollingWaveformAxisCtx = axisCanvas.getContext('2d');
-            console.log("VIS: ScrollingWaveformAxisCtx obtained."); // <-- Log context acquisition
+            // console.log("VIS: ScrollingWaveformAxisCtx obtained.");
         }
     });
 
@@ -552,9 +548,10 @@ export function resizeCanvases(canvasRefs, controls) {
 
 // --- Function to Draw Spectrogram Frequency Axis ---
 export function drawSpectrogramAxis() {
-    console.log("VIS: drawSpectrogramAxis called."); // <-- Add log
+    // Comment out initial call log
+    // console.log("VIS: drawSpectrogramAxis called."); 
     if (!spectrogramAxisCtx || !audioContext) {
-        console.warn("Spectrogram axis context or audio context not ready.");
+        // console.warn("Spectrogram axis context or audio context not ready."); // Keep warns?
         return;
     }
     const ctx = spectrogramAxisCtx;
@@ -577,10 +574,10 @@ export function drawSpectrogramAxis() {
     const yOffset = AXIS_VERTICAL_PADDING + TEXT_MARGIN;
     // --- End Definitions ---
 
-    // Add extra debug output for padding
-    console.log(`Canvas sizes: spectrogram=${mainSpectrogramHeight}px, axis=${canvasHeight}px`);
-    console.log(`Axis padding: AXIS_VERTICAL_PADDING=${AXIS_VERTICAL_PADDING}, TEXT_MARGIN=${TEXT_MARGIN}`);
-    console.log(`Final values: drawingHeight=${drawingHeight}, yOffset=${yOffset}`);
+    // Comment out extra debug output for padding
+    // console.log(`Canvas sizes: spectrogram=${mainSpectrogramHeight}px, axis=${canvasHeight}px`);
+    // console.log(`Axis padding: AXIS_VERTICAL_PADDING=${AXIS_VERTICAL_PADDING}, TEXT_MARGIN=${TEXT_MARGIN}`);
+    // console.log(`Final values: drawingHeight=${drawingHeight}, yOffset=${yOffset}`);
 
     // ✨ Theme-aware colors ✨
     const isDarkTheme = document.documentElement.classList.contains('midnight-blue');
@@ -603,11 +600,11 @@ export function drawSpectrogramAxis() {
     // Ensure linear frequencies do not exceed VISUAL_MAX_FREQ
     const linearFrequencies = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000, 21000, 22000]; // Removed 100
 
-    // Add debug logging
-    console.log("DrawSpectrogramAxis: VISUAL_MAX_FREQ =", VISUAL_MAX_FREQ);
-    console.log("DrawSpectrogramAxis: mainSpectrogramHeight =", mainSpectrogramHeight);
-    console.log("DrawSpectrogramAxis: yOffset =", yOffset);
-    console.log("DrawSpectrogramAxis: drawingHeight =", drawingHeight);
+    // Comment out debug logging
+    // console.log("DrawSpectrogramAxis: VISUAL_MAX_FREQ =", VISUAL_MAX_FREQ);
+    // console.log("DrawSpectrogramAxis: mainSpectrogramHeight =", mainSpectrogramHeight);
+    // console.log("DrawSpectrogramAxis: yOffset =", yOffset);
+    // console.log("DrawSpectrogramAxis: drawingHeight =", drawingHeight);
 
     const frequenciesToLabel = (scaleType === 'log') ? logFrequencies : linearFrequencies;
 
@@ -669,7 +666,8 @@ export function drawSpectrogramAxis() {
 
         // Remove old debug logging for y1,y2,y3
         if (scaleType === 'linear') {
-             console.log(`Freq ${freq}Hz: spectrogram_y=${spectrogram_y.toFixed(1)}, final y=${y.toFixed(1)}`);
+             // Comment out linear scale frequency log
+             // console.log(`Freq ${freq}Hz: spectrogram_y=${spectrogram_y.toFixed(1)}, final y=${y.toFixed(1)}`);
         }
 
         // Format frequency for display
@@ -697,9 +695,10 @@ export function drawSpectrogramAxis() {
 
 // --- Functions to Draw Waveform Amplitude Axes ---
 export function drawInstantaneousWaveformAxis(controls) {
-    console.log("VIS: drawInstantaneousWaveformAxis called."); // <-- Add log
+    // Double-check this is commented out
+    // console.log("VIS: drawInstantaneousWaveformAxis called."); 
     if (!instantaneousWaveformAxisCtx || !controls || !controls.waveformScaleSlider) {
-        console.warn("Instantaneous waveform axis context or controls not ready.");
+        // console.warn("Instantaneous waveform axis context or controls not ready."); // Keep warns?
         return;
     }
 
@@ -802,9 +801,10 @@ export function drawInstantaneousWaveformAxis(controls) {
 }
 
 export function drawScrollingWaveformAxis(controls) {
-    console.log("VIS: drawScrollingWaveformAxis called."); // <-- Add log
-    if (!scrollingWaveformAxisCtx || !controls || !controls.scrollingScaleSlider) {
-         console.warn("Scrolling waveform axis context or controls not ready.");
+    // Comment out initial call log
+    // console.log("VIS: drawScrollingWaveformAxis called."); 
+     if (!scrollingWaveformAxisCtx || !controls || !controls.scrollingScaleSlider) {
+         // console.warn("Scrolling waveform axis context or controls not ready."); // Keep warns?
          return;
      }
 
@@ -980,7 +980,8 @@ export function redrawStaticInstantaneousWaveform(controls) {
         }
     }
     ctx.stroke();
-    console.log("Redrew static instantaneous waveform.");
+    // Comment out this log
+    // console.log("Redrew static instantaneous waveform.");
 } 
 
 // Improved function that accounts for scale at time of capture
@@ -1037,5 +1038,6 @@ export function redrawStaticScrollingWaveformFromImage(controls) {
 
     // 4. Redraw the axis 
     drawScrollingWaveformAxis(controls);
-    console.log(`Redrew static scrolling waveform. ` + (lastScrollingCanvasImage ? `Original Scale: ${lastScrollingCanvasScale.toFixed(2)}, New Scale: ${newScale.toFixed(2)}` : 'No image.'));
+    // Comment out this log
+    // console.log(`Redrew static scrolling waveform. ` + (lastScrollingCanvasImage ? `Original Scale: ${lastScrollingCanvasScale.toFixed(2)}, New Scale: ${newScale.toFixed(2)}` : 'No image.'));
 } 
