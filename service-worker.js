@@ -109,8 +109,16 @@ self.addEventListener('activate', event => {
 // --- Fetch Event ---
 self.addEventListener('fetch', event => {
     console.log('[Service Worker] Fetch intercepted for:', event.request.url);
-    
-    // Use a cache-first strategy
+
+    // === Bypass SW interception for audio files ===
+    if (event.request.url.includes('/Audio_Files/')) {
+        console.log('[Service Worker] Fetch: Bypassing SW for audio file, fetching directly from network.');
+        // Let the browser handle the request directly
+        return; 
+    }
+    // ==============================================
+
+    // Use a cache-first strategy for non-audio assets
     event.respondWith((async () => {
         // 1. Try to find the response in the caches (check both)
         const cachedResponse = await caches.match(event.request);
