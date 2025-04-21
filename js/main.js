@@ -1,5 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.16'); // User confirmation log
-console.log("Commit: docs: Update Captains Log and README with recent changes and versioning info | 2025_04_20_v1.16");
+console.log('Confirmed! This is amazing! 2025_04_20_v1.17'); // User confirmation log
+console.log("Commit: refactor: Move SW audio precache outside waitUntil | 2025_04_20_v1.17");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 

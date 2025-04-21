@@ -21,10 +21,10 @@ const appShellFiles = [
 // --- Install Event ---
 self.addEventListener('install', event => {
     console.log('[Service Worker] Install event triggered');
-    event.waitUntil((async () => {
-        console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled.");
-        /* === TEMPORARILY DISABLED AUDIO PRE-CACHING ===
-        // --- UNCOMMENTING: Pre-cache Audio Files ---
+
+    // Define the async function for audio pre-caching separately
+    const precacheAudio = async () => {
+        console.log('[Service Worker] Starting background audio pre-caching...');
         try {
             // --- PRIORITY: Cache Audio Files ---
             console.log('[Service Worker] Fetching audio file list for caching (Priority)...');
@@ -69,21 +69,30 @@ self.addEventListener('install', event => {
             console.log(`[Service Worker] Finished attempting to cache audio files. Newly cached: ${audioCachedCount}`);
             // --- END: Cache Audio Files ---
         } catch (error) {
-            console.error('[Service Worker] Major installation error during audio pre-cache attempt:', error);
+            console.error('[Service Worker] Major error during background audio pre-cache attempt:', error);
         }
-        // */
-        // --- END UNCOMMENTING: Pre-cache Audio Files ---
-        console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled."); // Added log
-        /* === END TEMPORARILY DISABLED AUDIO PRE-CACHING === */
+    };
 
-        /* --- COMMENTED OUT: Cache App Shell (Second) ---
-        // ... (App shell caching code remains commented out) ...
-        --- END COMMENTED OUT: Cache App Shell --- */
+    // Wait only for essential setup (currently just skipWaiting)
+    event.waitUntil((async () => {
+        // REMOVE console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled.");
+        // REMOVE /* === TEMPORARILY DISABLED AUDIO PRE-CACHING === ... */
+        // REMOVE console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled."); // Added log
+        // REMOVE /* === END TEMPORARILY DISABLED AUDIO PRE-CACHING === */
 
-        console.log('[Service Worker] Installation sequence complete (App Shell caching skipped).');
+        // REMOVE /* --- COMMENTED OUT: Cache App Shell (Second) --- ... */
+
+        console.log('[Service Worker] waitUntil: Essential setup complete.');
         // Force the waiting service worker to become the active service worker.
-         self.skipWaiting();
+         await self.skipWaiting(); // Keep skipWaiting inside waitUntil
+         console.log('[Service Worker] waitUntil: skipWaiting called.');
     })());
+
+    // Start the non-essential audio pre-caching AFTER waitUntil is processed
+    // Use a microtask (queueMicrotask or Promise.resolve().then()) 
+    // or just call it directly - should run after sync code completes.
+    precacheAudio(); 
+
 });
 
 // --- Activate Event ---
