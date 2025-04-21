@@ -647,7 +647,37 @@ export function playAudioFile() {
     };
 
     // console.log(`Starting buffer source with offset: ${offset.toFixed(3)}`);
-    audioSource.start(0, offset); // Start immediately at calculated offset
+    // --- SAFARI FIX: Explicitly resume context before starting --- 
+    if (audioContext.state === 'suspended') {
+        // Note: playAudioFile needs to be async for await here
+        // await audioContext.resume(); // Temporarily commented out await for non-async
+        audioContext.resume().then(() => {
+           console.log("Safari Fix: AudioContext explicitly resumed before source start.");
+           // Start the source *after* resuming
+           try {
+               audioSource.start(0, offset); // Start immediately at calculated offset
+           } catch (e) {
+               console.error("Error starting audio source after resume:", e);
+           }
+        }).catch(err => {
+            console.error("Error resuming context for Safari fix:", err);
+            // Attempt to start anyway?
+            try {
+                audioSource.start(0, offset);
+            } catch (e) {
+                console.error("Error starting audio source after failed resume:", e);
+            }
+        });
+    } else {
+        // Start the source if context is already running
+        try {
+            audioSource.start(0, offset); // Start immediately at calculated offset
+        } catch (e) {
+            console.error("Error starting audio source:", e);
+        }
+    }
+    // --------------------------------------------------------------
+    // audioSource.start(0, offset); // Original start line - REMOVED
 
     filePauseTime = 0; // Reset pause time as we are now playing
     isFilePlaying = true;

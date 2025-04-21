@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.19'); // User confirmation log
-console.log("Commit: chore: Update Captain's Log and version | 2025_04_20_v1.19");
+console.log('Version: 2025_04_20_v1.20'); // User confirmation log
+console.log("Commit: fix: Add explicit AudioContext resume for Safari | 2025_04_20_v1.20");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
