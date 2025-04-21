@@ -22,6 +22,8 @@ const appShellFiles = [
 self.addEventListener('install', event => {
     console.log('[Service Worker] Install event triggered');
     event.waitUntil((async () => {
+        console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled.");
+        /* === TEMPORARILY DISABLED AUDIO PRE-CACHING ===
         // --- UNCOMMENTING: Pre-cache Audio Files ---
         try {
             // --- PRIORITY: Cache Audio Files ---
@@ -71,6 +73,8 @@ self.addEventListener('install', event => {
         }
         // */
         // --- END UNCOMMENTING: Pre-cache Audio Files ---
+        console.log("[Service Worker] Audio pre-caching in install event is temporarily disabled."); // Added log
+        /* === END TEMPORARILY DISABLED AUDIO PRE-CACHING === */
 
         /* --- COMMENTED OUT: Cache App Shell (Second) ---
         // ... (App shell caching code remains commented out) ...
