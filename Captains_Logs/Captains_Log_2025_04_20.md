@@ -44,5 +44,7 @@ Our journey with the Interactive Waveform Visualizer has been eventful. We navig
         *   Added CSS comments to clarify the distinction between the two overlays.
         *   This resolves **Outstanding Bug #4**.
     *   **Syntax Error Fix:** Resolved a minor syntax error in `js/visualizer.js` caused by leftover merge conflict markers.
+    *   **Audio Playback Fix:** Addressed issue where previously playing preloaded audio files would not stop when selecting a new one. Restored the fade-out `setTimeout` in `stopAudioFile` and modified `stopAudioSource` to accept the specific `AudioBufferSourceNode` to stop, preventing race conditions where the old audio continued playing.
+    *   **Loading Overlay Flash Fix:** Introduced a short delay (`setTimeout`) before showing the `#loading-overlay` in `js/main.js` to prevent a visual flash when preloaded files are served quickly from the cache.
     *   **Deployment:** Staged, committed, and pushed all related changes to the `main` branch.
 *   **Status:** Completed. File loading progress is now functional, and overlay styles are corrected. 

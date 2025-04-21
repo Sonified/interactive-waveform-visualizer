@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing! 17:06pm'); // User confirmation log
+console.log('Confirmed! This is amazing! 17:15pm'); // User confirmation log
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -240,8 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Requesting preloaded file via fetch: ${filePath}`);
             actualFileInput.value = ''; // Clear local file input
 
-            // --- NEW Fetch with Progress Tracking --- 
-            showLoadingOverlay(selectedFile); // Show overlay immediately
+            // --- Fetch with Progress Tracking & Delayed Overlay --- 
+            let overlayTimeoutId = null; // Variable to hold the timeout ID
+            
+            // === Schedule overlay show after a delay ===
+            overlayTimeoutId = setTimeout(() => {
+                console.log("Showing loading overlay (delay elapsed).");
+                showLoadingOverlay(selectedFile);
+                overlayTimeoutId = null; // Clear ID after showing
+            }, 150); // 150ms delay
             
             // === Create AbortController ===
             currentFetchController = new AbortController();
@@ -250,6 +257,13 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // === Pass signal to fetch ===
                 const response = await fetch(filePath, { signal });
+
+                // === If fetch is fast, clear the scheduled overlay show ===
+                if (overlayTimeoutId) {
+                    clearTimeout(overlayTimeoutId);
+                    overlayTimeoutId = null;
+                    console.log("Fetch completed before overlay delay, overlay cancelled.");
+                }
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -303,6 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleAudioDataLoad(audioData, selectedFile); // Pass ArrayBuffer
 
             } catch (error) {
+                // === Clear timeout on error too ===
+                if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
+                overlayTimeoutId = null;
+
                 // === Check for AbortError ===
                 if (error.name === 'AbortError') {
                     console.log('Fetch aborted successfully.');
@@ -319,11 +337,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (playbackRateSlider) playbackRateSlider.disabled = true; // Disable slider
                 }
             } finally {
-                hideLoadingOverlay(); // Hide overlay regardless of success or error
+                 // === Ensure timeout is cleared and hide overlay if it was shown ===
+                 if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
+                 overlayTimeoutId = null;
+                 hideLoadingOverlay(); // Hide overlay (safe to call even if not shown)
                 // === Reset controller on completion/error/abort ===
                 currentFetchController = null; 
             }
-            // --- END NEW Fetch with Progress Tracking ---
+            // --- END Fetch Logic ---
 
         } else {
             // Handle the case where the "-- Select --" option is chosen

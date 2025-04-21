@@ -673,39 +673,59 @@ export function stopAudioFile() {
     const sourceToStop = audioSource; // Capture current source node
     setTimeout(() => {
         // Check if this is still the active source before stopping
-        if (audioSource === sourceToStop) { 
-            stopAudioSource(); // Default stop, will update isFilePlaying
-            console.log("Audio source stopped after fade-out.");
-        } else {
-            console.log("Audio source changed before fade-out completed.");
-        }
+        // We will modify stopAudioSource to handle this correctly
+        stopAudioSource(sourceToStop); // Pass the specific source to stop
+        // console.log("Attempted stop of specific source node after fade-out."); 
+
+        // Original conditional check (now handled inside stopAudioSource potentially):
+        // if (audioSource === sourceToStop) { 
+        //     stopAudioSource(); // Default stop, will update isFilePlaying
+        //     console.log("Audio source stopped after fade-out.");
+        // } else {
+        //     console.log("Audio source changed before fade-out completed.");
+        // }
     }, (0.015 * 1000) + 5); // Delay slightly longer than fade
 
     checkAndStopVisualization(); // Check if visuals should stop now
     updateAudioActivityBodyClass(); // ✨ ADDED ✨
 }
 
-// Modified to accept an optional flag to prevent setting isFilePlaying=false
-function stopAudioSource(updatePlayState = true) { 
-     if (audioSource) {
-         try { 
-            // Prevent onended handler from firing during manual stop/pause
-            audioSource.onended = null; 
-            audioSource.stop(); 
-            audioSource.disconnect(); 
-            console.log("AudioBufferSourceNode stopped and disconnected.");
-        } catch(e) { console.warn("Error stopping source", e); }
-         audioSource = null;
-     }
-     // Always update state, even if source was already null
-     if (updatePlayState) { // Only update if flag is true (default)
-         isFilePlaying = false;
-         updateButtonState(playPauseFileButton, false, audioBuffer ? false : true);
-         checkAndStopVisualization(); // Check if visuals should stop now
-         updateAudioActivityBodyClass(); // ✨ ADDED ✨
-     }
-     // Do not reset fileStartTime/filePauseTime here
- }
+// Modified to accept an optional source node to stop and an optional flag
+function stopAudioSource(sourceToExplicitlyStop = null, updatePlayState = true) { 
+    const nodeToStop = sourceToExplicitlyStop || audioSource;
+    let stoppedCurrentGlobalSource = false;
+
+    if (nodeToStop) {
+        try { 
+           // Prevent onended handler from firing during manual stop/pause
+           nodeToStop.onended = null; 
+           nodeToStop.stop(); 
+           nodeToStop.disconnect(); 
+           console.log(`AudioBufferSourceNode stopped and disconnected (Node: ${sourceToExplicitlyStop ? 'Explicit' : 'Global'}).`);
+       } catch(e) { console.warn("Error stopping source", e); }
+        
+       // Clear the global reference ONLY if we stopped the node currently assigned to it
+       if (nodeToStop === audioSource) {
+           audioSource = null;
+           stoppedCurrentGlobalSource = true;
+           // console.log("Cleared global audioSource reference.");
+       }
+    }
+
+    // Update global state ONLY if we stopped the current global source 
+    // OR if no specific node was passed (meaning we intended to stop the global one)
+    // AND the updatePlayState flag allows it.
+    if (updatePlayState && (stoppedCurrentGlobalSource || !sourceToExplicitlyStop)) { 
+        // console.log("Updating global play state.");
+        isFilePlaying = false;
+        updateButtonState(playPauseFileButton, false, audioBuffer ? false : true);
+        checkAndStopVisualization(); // Check if visuals should stop now
+        updateAudioActivityBodyClass(); // ✨ ADDED ✨
+    } else if (updatePlayState) {
+        // console.log("Skipping global state update because an explicit, non-current node was stopped.");
+    }
+    // Do not reset fileStartTime/filePauseTime here
+}
 
 // ✨ NEW: Restart Audio File Function ✨
 export function restartAudioFile(controls) {
