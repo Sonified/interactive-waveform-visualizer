@@ -1,5 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.14'); // User confirmation log
-console.log("Commit: fix: Stop existing audio when selecting local file | 2025_04_20_v1.14");
+console.log('Confirmed! This is amazing! 2025_04_20_v1.15'); // User confirmation log
+console.log("Commit: refactor: Further reduce fetch logging verbosity | 2025_04_20_v1.15");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -286,10 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[Main Fetch] Starting stream read loop for ${selectedFile}...`);
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
-                    console.log(`[Main Fetch] Calling reader.read() for ${selectedFile}...`);
                     const { done, value } = await reader.read();
-                    // Log immediately after read() returns
-                    console.log(`[Main Fetch] reader.read() returned: done=${done}, value size=${value ? value.length : 'undefined'} for ${selectedFile}`);
 
                     if (done) {
                         console.log("[Main Fetch] Fetch stream finished (done=true). Breaking loop.");
