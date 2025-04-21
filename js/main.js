@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing! 16:46pm'); // User confirmation log
+console.log('Confirmed! This is amazing! 16:57pm'); // User confirmation log
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -25,6 +25,18 @@ import { // Import all necessary elements from config.js
     waveformWindowSizeSelect, scrollSpeedWaveformSlider, scrollSpeedWaveformValueSpan,
     linkFftSizeCheckbox, linkToWaveformCheckbox
 } from './config.js';
+
+// === Add AbortController reference ===
+let currentFetchController = null;
+
+// === Export function to cancel the fetch ===
+export function cancelCurrentFetch() {
+    if (currentFetchController) {
+        console.log("UI requested fetch cancellation.");
+        currentFetchController.abort();
+        currentFetchController = null; // Reset controller after aborting
+    }
+}
 
 let isFirstPlay = true; // Flag to track the first playback action
 let initializingIntervalId = null; // Variable to store the interval ID
@@ -230,8 +242,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- NEW Fetch with Progress Tracking --- 
             showLoadingOverlay(selectedFile); // Show overlay immediately
+            
+            // === Create AbortController ===
+            currentFetchController = new AbortController();
+            const signal = currentFetchController.signal;
+            
             try {
-                const response = await fetch(filePath);
+                // === Pass signal to fetch ===
+                const response = await fetch(filePath, { signal });
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -285,17 +303,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleAudioDataLoad(audioData, selectedFile); // Pass ArrayBuffer
 
             } catch (error) {
-                console.error(`Error fetching or processing preloaded file ${selectedFile}:`, error);
-                // Optionally display error to user
-                const infoDisplay = document.getElementById('file-info-display');
-                if (infoDisplay) {
-                    infoDisplay.innerHTML = `<p>Error loading: ${selectedFile}</p>`;
+                // === Check for AbortError ===
+                if (error.name === 'AbortError') {
+                    console.log('Fetch aborted successfully.');
+                    // No need for error message in UI, overlay is hidden by click handler
+                } else {
+                    console.error(`Error fetching or processing preloaded file ${selectedFile}:`, error);
+                    // Optionally display error to user
+                    const infoDisplay = document.getElementById('file-info-display');
+                    if (infoDisplay) {
+                        infoDisplay.innerHTML = `<p>Error loading: ${selectedFile}</p>`;
+                    }
+                    updateButtonState(playPauseFileButton, false, true); // Disable play button on error
+                    const playbackRateSlider = document.getElementById('playback-rate');
+                    if (playbackRateSlider) playbackRateSlider.disabled = true; // Disable slider
                 }
-                updateButtonState(playPauseFileButton, false, true); // Disable play button on error
-                const playbackRateSlider = document.getElementById('playback-rate');
-                if (playbackRateSlider) playbackRateSlider.disabled = true; // Disable slider
             } finally {
                 hideLoadingOverlay(); // Hide overlay regardless of success or error
+                // === Reset controller on completion/error/abort ===
+                currentFetchController = null; 
             }
             // --- END NEW Fetch with Progress Tracking ---
 

@@ -35,6 +35,8 @@ import { // <-- Add imports from audio.js
     wasFilePlayingBeforeSpacePause, // <-- Import spacebar state
     wasGeneratedPlayingBeforeSpacePause // <-- Import spacebar state
 } from './audio.js';
+// === Import cancellation function ===
+import { cancelCurrentFetch } from './main.js';
 
 // --- Button State Helper ---
 export function updateButtonState(button, isPlaying, isDisabled = false) {
@@ -126,6 +128,19 @@ export function setupUIEventListeners(controls) {
 
     // Get the restart button
     const restartFileButton = document.getElementById('restart-file-button');
+
+    // === Add listener for Loading Overlay Cancel Button ===
+    const loadingCancelButton = document.getElementById('loading-cancel-button');
+    if (loadingCancelButton) {
+        loadingCancelButton.addEventListener('click', () => {
+            console.log("Loading cancel button clicked.");
+            cancelCurrentFetch(); // Request cancellation from main.js
+            hideLoadingOverlay(); // Hide overlay immediately
+        });
+    } else {
+        console.warn("Could not find loading cancel button to attach listener.");
+    }
+    // =====================================================
 
     if (playPauseGeneratedButton) {
         // console.log("UI: Attaching listener to Generated Play/Pause button");

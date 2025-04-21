@@ -53,9 +53,12 @@
         }
 
         /* Dark Theme Overrides for Initializing Overlay */
+        /* Use a full-screen gradient to match the dark theme body */
         html.midnight-blue #initializing-overlay {
-            background-color: rgba(0, 0, 0, 1); /* Restore black background */
+            /* background-color: rgba(0, 0, 0, 1); */ /* REMOVED Opaque black */
+            background: linear-gradient(to top right, #050b27, #131d52); /* APPLY Blue gradient */
         }
+        /* Dark Theme Override for Initializing Text */
         html.midnight-blue #initializing-text {
             color: white; /* Restore white text */
         }
@@ -1021,12 +1024,15 @@
             font-style: italic;
         }
 
-        /* Loading Overlay Dark Theme Override */
+        /* File Loading Overlay Dark Theme Override */
+        /* Use a semi-transparent dark background, distinct from initializing overlay */
         html.midnight-blue #loading-overlay {
-            background: linear-gradient(to top right, #050b27, #131d52); /* Match body gradient */
+            /* background: linear-gradient(to top right, #050b27, #131d52); */ /* REMOVED: Match body gradient */
+            background-color: rgba(0, 0, 0, 0.7); /* APPLY semi-transparent dark background */
         }
+        /* File Loading Overlay Content Dark Theme Override */
         html.midnight-blue .loading-content {
-            background-color: rgba(10, 15, 46, 0.9); /* Dark blue, slightly transparent */
+            background-color: rgba(10, 15, 46, 0.9); /* Dark blue, slightly transparent box */
             /* Text colors should already be light, but we could force them if needed */
             /* color: #eee; */ 
         }

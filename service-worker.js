@@ -1,5 +1,3 @@
-// console.log('Confirmed! This is amazing!'); // User confirmation log - REMOVED
-
 const APP_SHELL_CACHE_NAME = 'app-shell-cache-v1';
 const AUDIO_CACHE_NAME = 'audio-cache-v1'; // Reuse the existing audio cache name
 
@@ -126,14 +124,15 @@ self.addEventListener('fetch', event => {
         try {
             const networkResponse = await fetch(event.request);
             
-            // 3. Cache the network response dynamically (optional, but good for offline)
-            // Only cache successful GET requests
-            if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
-                const cacheName = event.request.url.includes('/Audio_Files/') ? AUDIO_CACHE_NAME : APP_SHELL_CACHE_NAME;
+            // 3. Cache the network response dynamically - ONLY if it's an audio file
+            // Only cache successful GET requests for files in Audio_Files/
+            if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET' && event.request.url.includes('/Audio_Files/')) {
+                // const cacheName = event.request.url.includes('/Audio_Files/') ? AUDIO_CACHE_NAME : APP_SHELL_CACHE_NAME; // REMOVED logic - only cache audio
+                const cacheName = AUDIO_CACHE_NAME; // Always use audio cache here
                 const cache = await caches.open(cacheName);
                 // IMPORTANT: Clone the response before caching AND returning it.
                 // A response is a stream and can only be consumed once.
-                // console.log('[Service Worker] Caching network response for:', event.request.url);
+                // console.log('[Service Worker] Caching network response for audio file:', event.request.url);
                 cache.put(event.request, networkResponse.clone()); 
             }
             
