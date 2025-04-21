@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.21'); // User confirmation log
-console.log("Commit: fix(sw): Allow Service Worker to intercept and cache audio file fetches | 2025_04_20_v1.21");
+console.log('Version: 2025_04_20_v1.22'); // User confirmation log
+console.log("Commit: chore: Add debug logs for fetch progress loop | 2025_04_20_v1.22");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -286,7 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[Main Fetch] Starting stream read loop for ${selectedFile}...`);
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
+                    // console.log("[Main Fetch DEBUG] Loop iteration start."); // DEBUG
                     const { done, value } = await reader.read();
+                    // console.log(`[Main Fetch DEBUG] reader.read() returned: done=${done}, value size=${value ? value.length : 'undefined'}`); // DEBUG
 
                     if (done) {
                         console.log("[Main Fetch] Fetch stream finished (done=true). Breaking loop.");
@@ -300,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     chunks.push(value);
                     loaded += value.length;
+                    console.log(`[Main Fetch DEBUG] Calling updateLoadingProgress(${loaded}, ${totalSize})`); // DEBUG
                     updateLoadingProgress(loaded, totalSize); // Update UI progress bar
                     
                     // --- Log progress intermittently ---
