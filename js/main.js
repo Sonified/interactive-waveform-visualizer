@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.23'); // User confirmation log
-console.log("Commit: feat: Implement SW-based fetch progress tracking | 2025_04_20_v1.23");
+console.log('Version: 2025_04_20_v1.25'); // User confirmation log
+console.log("Commit: fix: Pass controls to updateNoiseType to fix ReferenceError | 2025_04_20_v1.25");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 

@@ -242,7 +242,7 @@ export function setupUIEventListeners(controls) {
     frequencyLogSlider.addEventListener('input', () => updateFrequencyLog(controls));
     amplitudeSlider.addEventListener('input', () => updateAmplitude(controls));
     noiseLevelSlider.addEventListener('input', () => updateNoiseLevel(controls));
-    noiseTypeSelect.addEventListener('change', updateNoiseType);
+    noiseTypeSelect.addEventListener('change', () => updateNoiseType(controls));
     windowSizeSelect.addEventListener('change', () => updateAnalyserSettings(controls));
     
     // --- Synchronize Scroll Speed Sliders ---
@@ -441,11 +441,23 @@ function updateNoiseLevel(controls) {
          else if (noiseValue <= 0 && noiseSource) { stopNoiseSource(); } 
      }
  }
-function updateNoiseType() { 
-     if (noiseSource && (isGeneratedPlaying || isPreviewing) && parseFloat(noiseLevelSlider.value) > 0) { 
-         createNoiseSource(true);
-     } 
- }
+function updateNoiseType(controls) {
+    // Check if noise should be active based on global state and noise level
+    const shouldBePlaying = (isGeneratedPlaying || isPreviewing) && controls.noiseLevelSlider && parseFloat(controls.noiseLevelSlider.value) > 0;
+    console.log(`UI: Noise type changed. Should be playing: ${shouldBePlaying}`); // Debug log
+    
+    if (shouldBePlaying) {
+        // If noise should be playing, regenerate the source immediately
+        // createNoiseSource handles stopping the old one and starting the new one
+        console.log("UI: Regenerating noise source due to type change while active.");
+        createNoiseSource(true); // Pass true flag to reuse existing gain ramp (if any)
+    } else {
+        // If noise shouldn't be playing (e.g., level is 0 or master is paused),
+        // we don't need to do anything immediately. The new type will be used
+        // the next time noise is started.
+        console.log("UI: Noise type changed while inactive. Type will be used on next start.");
+    }
+}
 function updateAnalyserSettings(controls) {
     console.log(`UI: updateAnalyserSettings called. New Spectrogram FFT size selected: ${controls.windowSizeSelect.value}`); // <-- ADD LOG
     const { windowSizeSelect, linkFftSizeCheckbox, waveformWindowSizeSelect } = controls;
