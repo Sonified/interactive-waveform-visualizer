@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.22'); // User confirmation log
-console.log("Commit: chore: Add debug logs for fetch progress loop | 2025_04_20_v1.22");
+console.log('Version: 2025_04_20_v1.23'); // User confirmation log
+console.log("Commit: feat: Implement SW-based fetch progress tracking | 2025_04_20_v1.23");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -81,7 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         });
     }
-    // --- End Service Worker Registration ---
+    // === ADDED: Listener for messages from Service Worker ===
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.type === 'FETCH_PROGRESS') {
+            // console.log(`[Main] Received SW Progress: ${event.data.loaded} / ${event.data.total}`); // DEBUG
+            updateLoadingProgress(event.data.loaded, event.data.total);
+        }
+    });
+    // =======================================================
     
     const initOverlay = document.getElementById('initializing-overlay');
     const initTextElement = document.getElementById('initializing-text');
@@ -256,83 +263,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const signal = currentFetchController.signal;
             
             try {
-                // === Pass signal to fetch ===
+                // === Pass signal to fetch (SW will now handle stream) ===
                 const response = await fetch(filePath, { signal });
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const contentLength = response.headers.get('content-length');
-                if (!contentLength) {
-                    console.warn('Content-Length header not found, cannot show progress.');
-                    // Fallback to original method if no length
-                    const audioData = await response.arrayBuffer();
-                    console.log(`Fetched ${filePath} (no progress), size: ${audioData.byteLength} bytes.`);
-                    handleAudioDataLoad(audioData, selectedFile);
-                    // hideLoadingOverlay(); // Moved to finally block
-                    return; // Exit after fallback
-                }
-
-                const totalSize = parseInt(contentLength, 10);
-                let loaded = 0;
-                const reader = response.body.getReader();
-                const chunks = []; // Array to store received chunks
-                let loggedMilestones = { 25: false, 50: false, 75: false }; // Track logged percentages
-
-                console.log(`Fetching ${selectedFile}, Total size: ${totalSize} bytes.`);
-
-                // Read the stream
-                console.log(`[Main Fetch] Starting stream read loop for ${selectedFile}...`);
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                    // console.log("[Main Fetch DEBUG] Loop iteration start."); // DEBUG
-                    const { done, value } = await reader.read();
-                    // console.log(`[Main Fetch DEBUG] reader.read() returned: done=${done}, value size=${value ? value.length : 'undefined'}`); // DEBUG
-
-                    if (done) {
-                        console.log("[Main Fetch] Fetch stream finished (done=true). Breaking loop.");
-                        break; // Exit the loop when done
-                    }
-
-                    if (!value) {
-                        console.warn("[Main Fetch] Received undefined chunk value before stream finished. Continuing...");
-                        continue; // Should not happen with done=false, but be safe
-                    }
-
-                    chunks.push(value);
-                    loaded += value.length;
-                    console.log(`[Main Fetch DEBUG] Calling updateLoadingProgress(${loaded}, ${totalSize})`); // DEBUG
-                    updateLoadingProgress(loaded, totalSize); // Update UI progress bar
-                    
-                    // --- Log progress intermittently ---
-                    const percent = (loaded / totalSize) * 100;
-                    if (percent >= 25 && !loggedMilestones[25]) {
-                        console.log(`[Main Fetch] Progress: ~25% loaded (${loaded}/${totalSize} bytes)`);
-                        loggedMilestones[25] = true;
-                    } else if (percent >= 50 && !loggedMilestones[50]) { 
-                        console.log(`[Main Fetch] Progress: ~50% loaded (${loaded}/${totalSize} bytes)`);
-                        loggedMilestones[50] = true;
-                    } else if (percent >= 75 && !loggedMilestones[75]) {
-                        console.log(`[Main Fetch] Progress: ~75% loaded (${loaded}/${totalSize} bytes)`);
-                        loggedMilestones[75] = true;
-                    }
-                    // --- End intermittent logging ---
-                }
-
-                console.log(`[Main Fetch] Stream loop finished. Combining ${chunks.length} chunks...`);
-                // Combine chunks into a single Uint8Array
-                const allChunks = new Uint8Array(loaded);
-                let position = 0;
-                for (const chunk of chunks) {
-                    allChunks.set(chunk, position);
-                    position += chunk.length;
-                }
-                console.log(`[Main Fetch] Chunks combined. Final Uint8Array size: ${allChunks.length}`);
-
-                // Convert Uint8Array to ArrayBuffer (needed by decodeAudioData)
-                const audioData = allChunks.buffer;
-                console.log(`[Main Fetch] Finished fetching ${selectedFile}. Final ArrayBuffer size: ${audioData.byteLength} bytes.`);
+                // === Get ArrayBuffer directly from SW response ===
+                console.log(`[Main Fetch] Receiving response from SW for ${selectedFile}. Getting ArrayBuffer...`);
+                const audioData = await response.arrayBuffer();
+                console.log(`[Main Fetch] Received ArrayBuffer for ${selectedFile}. Size: ${audioData.byteLength}`);
+                // ================================================
 
                 // === Clear overlay timeout if fetch was fast ===
                 if (overlayTimeoutId) {

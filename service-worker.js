@@ -148,21 +148,88 @@ self.addEventListener('fetch', event => {
         // 2. If not in cache, fetch from the network
         console.log(`[SW] Fetch: Cache miss in ${cacheNameToTry} for ${event.request.url}. Fetching network...`);
         try {
+            // --- Fetch and Stream with Progress --- 
             const networkResponse = await fetch(event.request);
             console.log(`[SW] Fetch: Network response OK for ${event.request.url}, Status: ${networkResponse.status}`);
 
-            // 3. Cache the network response ONLY for successful audio file GET requests
-            if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET' && isAudioFile) {
-                // IMPORTANT: Clone the response before caching AND returning it.
-                console.log('[SW] Caching network response for audio file:', event.request.url);
-                await cache.put(event.request, networkResponse.clone());
-            }
+            // Check if we should track progress and cache (audio files only for now)
+            const shouldTrackProgress = networkResponse.ok && 
+                                        event.request.method === 'GET' && 
+                                        isAudioFile && 
+                                        networkResponse.body && 
+                                        networkResponse.headers.get('content-length');
 
-            console.log(`[SW] Fetch: Returning network response for ${event.request.url}`);
-            return networkResponse;
+            if (shouldTrackProgress) {
+                const total = parseInt(networkResponse.headers.get('content-length') || '0', 10);
+                let loaded = 0;
+                const reader = networkResponse.body.getReader();
+                const chunks = [];
+                let lastProgressSent = 0; // Track time of last message
+                const progressInterval = 100; // Send progress every 100ms
+
+                // Function to send progress update
+                const sendProgress = async (force = false) => {
+                    const now = Date.now();
+                    if (force || now - lastProgressSent > progressInterval) {
+                        const clients = await self.clients.matchAll({
+                            includeUncontrolled: true,
+                            type: 'window',
+                        });
+                        clients.forEach(client => {
+                            client.postMessage({ 
+                                type: 'FETCH_PROGRESS', 
+                                url: event.request.url, // Include URL for potential filtering
+                                loaded: loaded,
+                                total: total 
+                            });
+                        });
+                        lastProgressSent = now;
+                        // console.log(`[SW Progress] Sent: ${loaded} / ${total}`); // DEBUG
+                    }
+                };
+
+                // Read the stream
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    try {
+                        const { done, value } = await reader.read();
+                        if (done) {
+                            await sendProgress(true); // Send final progress
+                            break;
+                        }
+                        chunks.push(value);
+                        loaded += value.length;
+                        await sendProgress(); // Send progress update (throttled)
+                    } catch (streamError) {
+                        console.error('[SW] Error reading stream:', streamError);
+                        // Potentially send an error message back to client
+                        throw streamError; // Re-throw to be caught by outer catch
+                    }
+                }
+                
+                // Combine chunks into a Blob, then create a new Response
+                const blob = new Blob(chunks);
+                const headers = {};
+                networkResponse.headers.forEach((value, key) => { headers[key] = value; });
+                const finalResponse = new Response(blob, { status: networkResponse.status, statusText: networkResponse.statusText, headers: headers });
+                
+                // Cache the final response (using the blob)
+                console.log('[SW] Caching final response for audio file:', event.request.url);
+                await cache.put(event.request, finalResponse.clone()); // Cache the *new* response
+                
+                console.log(`[SW] Fetch: Returning streamed & cached response for ${event.request.url}`);
+                return finalResponse; // Return the *new* response built from chunks
+
+            } else {
+                // For non-audio files, or if progress tracking isn't possible (no length, etc.)
+                // Return the network response directly (no caching logic needed here for non-audio based on previous rules)
+                console.log(`[SW] Fetch: Returning network response directly (no progress tracking/caching) for ${event.request.url}`);
+                return networkResponse;
+            }
+            // --- End Fetch and Stream --- 
 
         } catch (error) {
-            console.error('[SW] Network fetch failed:', error);
+            console.error('[SW] Network fetch or stream processing failed:', error);
             // Optional: Return a fallback offline page or resource here
         }
     })());
