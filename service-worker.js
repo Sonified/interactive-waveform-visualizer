@@ -123,52 +123,47 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     console.log('[Service Worker] Fetch intercepted for:', event.request.url);
 
-    // === Bypass SW interception for audio files ===
+    // REMOVED: Bypass SW interception for audio files
+    /*
     if (event.request.url.includes('/Audio_Files/')) {
         console.log('[Service Worker] Fetch: Bypassing SW for audio file, fetching directly from network.');
         // Let the browser handle the request directly
         return; 
     }
-    // ==============================================
+    */
 
-    // Use a cache-first strategy for non-audio assets
+    // Use a cache-first strategy (checking appropriate cache based on request type)
     event.respondWith((async () => {
-        // 1. Try to find the response in the caches (check both)
-        const cachedResponse = await caches.match(event.request);
+        const isAudioFile = event.request.url.includes('/Audio_Files/');
+        const cacheNameToTry = isAudioFile ? AUDIO_CACHE_NAME : APP_SHELL_CACHE_NAME;
+        const cache = await caches.open(cacheNameToTry);
+
+        // 1. Try to find the response in the appropriate cache
+        const cachedResponse = await cache.match(event.request);
         if (cachedResponse) {
-            // console.log('[Service Worker] Returning cached response for:', event.request.url);
+            // console.log(`[SW] Cache hit in ${cacheNameToTry} for:`, event.request.url);
             return cachedResponse;
         }
 
         // 2. If not in cache, fetch from the network
-        console.log(`[Service Worker] Fetch: No cache hit for ${event.request.url}. Fetching from network...`);
+        console.log(`[SW] Fetch: Cache miss in ${cacheNameToTry} for ${event.request.url}. Fetching network...`);
         try {
             const networkResponse = await fetch(event.request);
-            console.log(`[Service Worker] Fetch: Network response received for ${event.request.url}, Status: ${networkResponse.status}`);
-            
-            // 3. Cache the network response dynamically - ONLY if it's an audio file
-            // Only cache successful GET requests for files in Audio_Files/
-            if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET' && event.request.url.includes('/Audio_Files/')) {
-                // const cacheName = event.request.url.includes('/Audio_Files/') ? AUDIO_CACHE_NAME : APP_SHELL_CACHE_NAME; // REMOVED logic - only cache audio
-                const cacheName = AUDIO_CACHE_NAME; // Always use audio cache here
-                const cache = await caches.open(cacheName);
+            console.log(`[SW] Fetch: Network response OK for ${event.request.url}, Status: ${networkResponse.status}`);
+
+            // 3. Cache the network response ONLY for successful audio file GET requests
+            if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET' && isAudioFile) {
                 // IMPORTANT: Clone the response before caching AND returning it.
-                // A response is a stream and can only be consumed once.
-                // console.log('[Service Worker] Caching network response for audio file:', event.request.url);
-                cache.put(event.request, networkResponse.clone()); 
+                console.log('[SW] Caching network response for audio file:', event.request.url);
+                await cache.put(event.request, networkResponse.clone());
             }
-            
-            console.log(`[Service Worker] Fetch: Returning network response for ${event.request.url}`);
+
+            console.log(`[SW] Fetch: Returning network response for ${event.request.url}`);
             return networkResponse;
-            
+
         } catch (error) {
-            console.error('[Service Worker] Network fetch failed:', error);
+            console.error('[SW] Network fetch failed:', error);
             // Optional: Return a fallback offline page or resource here
-            // For now, just let the browser handle the network error
-            // return new Response("Network error happened", {
-            //     status: 408,
-            //     headers: { "Content-Type": "text/plain" },
-            // });
         }
     })());
 }); 

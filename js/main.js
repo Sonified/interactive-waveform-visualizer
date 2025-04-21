@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.20'); // User confirmation log
-console.log("Commit: fix: Add explicit AudioContext resume for Safari | 2025_04_20_v1.20");
+console.log('Version: 2025_04_20_v1.21'); // User confirmation log
+console.log("Commit: fix(sw): Allow Service Worker to intercept and cache audio file fetches | 2025_04_20_v1.21");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
