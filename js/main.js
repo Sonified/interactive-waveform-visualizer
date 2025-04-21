@@ -1,5 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.17'); // User confirmation log
-console.log("Commit: refactor: Move SW audio precache outside waitUntil | 2025_04_20_v1.17");
+console.log('Version: 2025_04_20_v1.18'); // User confirmation log
+console.log("Commit: style: Adjust version log format | 2025_04_20_v1.18");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
