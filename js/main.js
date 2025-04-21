@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.11'); // User confirmation log
+console.log('Confirmed! This is amazing! 2025_04_20_v1.12'); // User confirmation log
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -240,12 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Requesting preloaded file via fetch: ${filePath}`);
             actualFileInput.value = ''; // Clear local file input
 
-            // --- Fetch with Progress Tracking & Immediate Overlay --- REMOVED DELAY
-            // REMOVE let overlayTimeoutId = null; 
-
-            // === Show overlay immediately ===
-            console.log("[Main Fetch] Showing loading overlay immediately for:", selectedFile);
-            showLoadingOverlay(selectedFile); // Show immediately
+            // --- Fetch with Progress Tracking & DELAYED Overlay --- 
+            let overlayTimeoutId = null; // Variable to hold the timeout ID
+            
+            // === Schedule overlay show after a delay ===
+            overlayTimeoutId = setTimeout(() => {
+                console.log("[Main Fetch] Delay elapsed, showing loading overlay for:", selectedFile);
+                showLoadingOverlay(selectedFile);
+                overlayTimeoutId = null; // Clear ID after showing
+            }, 200); // 200ms delay
             
             // === Create AbortController ===
             currentFetchController = new AbortController();
@@ -254,13 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // === Pass signal to fetch ===
                 const response = await fetch(filePath, { signal });
-
-                // === REMOVE logic that cancels overlay based on fetch speed ===
-                // if (overlayTimeoutId) {
-                //     clearTimeout(overlayTimeoutId);
-                //     overlayTimeoutId = null;
-                //     console.log("Fetch completed before overlay delay, overlay cancelled.");
-                // }
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -324,12 +320,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Convert Uint8Array to ArrayBuffer (needed by decodeAudioData)
                 const audioData = allChunks.buffer;
                 console.log(`[Main Fetch] Finished fetching ${selectedFile}. Final ArrayBuffer size: ${audioData.byteLength} bytes.`);
+
+                // === Clear overlay timeout if fetch was fast ===
+                if (overlayTimeoutId) {
+                    clearTimeout(overlayTimeoutId);
+                    overlayTimeoutId = null;
+                    console.log("[Main Fetch] Fast fetch/stream read completed before overlay timeout.");
+                }
+                // ==============================================
+                
                 handleAudioDataLoad(audioData, selectedFile); // Pass ArrayBuffer
 
             } catch (error) {
-                // === REMOVED Clear timeout on error too ===
-                // if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
-                // overlayTimeoutId = null;
+                // === Clear timeout on error too ===
+                if (overlayTimeoutId) {
+                    clearTimeout(overlayTimeoutId);
+                    overlayTimeoutId = null; // Ensure it's nulled on error
+                }
+                // ===================================
 
                 // === Check for AbortError ===
                 if (error.name === 'AbortError') {
@@ -349,8 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                  // === Ensure overlay is hidden regardless of success/error/abort ===
                  console.log("[Main Fetch] Finally block reached. Hiding overlay.");
-                 // REMOVED if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
-                 // REMOVED overlayTimeoutId = null;
                  hideLoadingOverlay(); // Hide overlay (safe to call even if not shown)
                 // === Reset controller on completion/error/abort ===
                 console.log("[Main Fetch] Resetting fetch controller.");
