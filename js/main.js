@@ -1,5 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.15'); // User confirmation log
-console.log("Commit: refactor: Further reduce fetch logging verbosity | 2025_04_20_v1.15");
+console.log('Confirmed! This is amazing! 2025_04_20_v1.16'); // User confirmation log
+console.log("Commit: docs: Update Captains Log and README with recent changes and versioning info | 2025_04_20_v1.16");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 

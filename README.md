@@ -41,6 +41,10 @@ Understanding these points will help grasp how the modules work together:
 *   **Loading Overlays (`index.html`, `main.js`, `ui.js`, `audio.js`):** 
     *   **Initialization Overlay (`#initializing-overlay`):** Shown immediately via CSS in `index.html` to prevent Flash Of Unstyled Content (FOUC). Styled with an opaque background (light grey or dark blue gradient) matching the body theme. Faded out by `main.js` after essential scripts load.
     *   **File Loading Overlay (`#loading-overlay`):** Used *only* for loading preloaded files from the server. Triggered by `main.js` (`showLoadingOverlay` from `ui.js`) before initiating a `fetch` request. Progress is updated based on the fetch stream, and the overlay is hidden (`hideLoadingOverlay` from `ui.js`) upon completion or error. Local file selection uses `FileReader` in `audio.js`, which reads the file almost instantly, so this overlay is intentionally not shown for local files. It maintains a consistent semi-transparent background (light or dark grey) across themes.
+*   **Versioning & Commit Strategy:** To track progress and aid debugging, a specific convention is used for commits:
+    *   The first line of `js/main.js` contains a `console.log` with the date and an incrementing version number: `YYYY_MM_DD_vX.YZ` (e.g., `2025_04_20_v1.15`).
+    *   The second line of `js/main.js` contains a `console.log` displaying the full Git commit message for that version.
+    *   The Git commit message itself includes a brief description of the change followed by a separator and the same version string: `type: Description | YYYY_MM_DD_vX.YZ`.
 
 ## Current Status & Known Issues
 
