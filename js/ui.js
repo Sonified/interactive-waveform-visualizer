@@ -33,7 +33,8 @@ import { // <-- Add imports from audio.js
     fileReader, audioSource, noiseSource,
     lastUserInitiatedSource, // <-- Add lastUserInitiatedSource import
     wasFilePlayingBeforeSpacePause, // <-- Import spacebar state
-    wasGeneratedPlayingBeforeSpacePause // <-- Import spacebar state
+    wasGeneratedPlayingBeforeSpacePause, // <-- Import spacebar state
+    stopGeneratedAudio, stopAudioFile
 } from './audio.js';
 // === Import cancellation function ===
 import { cancelCurrentFetch } from './main.js';
@@ -166,9 +167,20 @@ export function setupUIEventListeners(controls) {
         });
     } else { console.warn("File Restart button not found for listener."); }
 
-    // audioFileInput.addEventListener('change', handleFileSelect);
+    // === STOP Existing Audio FIRST ===
+    console.log("[Local File Select] Stopping any existing audio.");
+    stopGeneratedAudio(); 
+    stopAudioFile();
+    // =================================
+
     // Restore simple file input listener
     audioFileInput.addEventListener('change', (event) => {
+        // === STOP Existing Audio FIRST ===
+        console.log("[Local File Select] Stopping any existing audio.");
+        stopGeneratedAudio(); 
+        stopAudioFile();
+        // =================================
+
         // Get the selected file
         const file = event.target.files[0];
         

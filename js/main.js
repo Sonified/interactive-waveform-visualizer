@@ -1,5 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.13'); // User confirmation log
-console.log("Commit: refactor: Reduce fetch progress logging verbosity | 2025_04_20_v1.13");
+console.log('Confirmed! This is amazing! 2025_04_20_v1.14'); // User confirmation log
+console.log("Commit: fix: Stop existing audio when selecting local file | 2025_04_20_v1.14");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
