@@ -696,7 +696,7 @@ const waveformCanvas = document.getElementById('waveform-canvas');
 
 // --- Loading Overlay Functions ---
 export function showLoadingOverlay(filename) { // <-- Add export
-    console.log("Showing loading overlay for:", filename); 
+    console.log("[UI] showLoadingOverlay called for:", filename); // ADDED LOG 
     if (!loadingOverlay || !loadingText || !progressBarFill || !loadingProgressText || !loadingTipText) {
         console.error("Loading overlay elements not found!");
         return;

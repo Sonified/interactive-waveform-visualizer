@@ -120,9 +120,10 @@ self.addEventListener('fetch', event => {
         }
 
         // 2. If not in cache, fetch from the network
-        // console.log('[Service Worker] No cache hit. Fetching from network:', event.request.url);
+        console.log(`[Service Worker] Fetch: No cache hit for ${event.request.url}. Fetching from network...`);
         try {
             const networkResponse = await fetch(event.request);
+            console.log(`[Service Worker] Fetch: Network response received for ${event.request.url}, Status: ${networkResponse.status}`);
             
             // 3. Cache the network response dynamically - ONLY if it's an audio file
             // Only cache successful GET requests for files in Audio_Files/
@@ -136,6 +137,7 @@ self.addEventListener('fetch', event => {
                 cache.put(event.request, networkResponse.clone()); 
             }
             
+            console.log(`[Service Worker] Fetch: Returning network response for ${event.request.url}`);
             return networkResponse;
             
         } catch (error) {

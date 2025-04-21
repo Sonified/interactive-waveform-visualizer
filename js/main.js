@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing! 17:15pm'); // User confirmation log
+console.log('Confirmed! This is amazing! 17:20pm'); // User confirmation log
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -288,9 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Fetching ${selectedFile}, Total size: ${totalSize} bytes.`);
 
                 // Read the stream
+                console.log(`[Main Fetch] Starting stream read loop for ${selectedFile}...`);
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
+                    console.log(`[Main Fetch] Calling reader.read() for ${selectedFile}...`);
                     const { done, value } = await reader.read();
+                    console.log(`[Main Fetch] reader.read() returned: done=${done}, value size=${value ? value.length : 'undefined'} for ${selectedFile}`);
 
                     if (done) {
                         console.log("Fetch stream finished.");
