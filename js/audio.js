@@ -466,43 +466,27 @@ export function stopNoiseSource() {
 // --- File Audio Control ---
 export function handleFileSelect(event) {
     const file = event.target.files[0];
-    // Make sure button state reflects loading (disabled)
-    updateButtonState(playPauseFileButton, false, true); 
-    
-    if (!file) {
-        // This case is now handled by the listener in ui.js which resets the display
-        // fileInfoDisplay.innerHTML = `<p>File: None Loaded</p><p>Duration: --</p>`; // Redundant
-        audioBuffer = null;
-        fileStartTime = 0;
-        filePauseTime = 0;
-        // Keep input visually distinct when empty (handled by CSS/ui.js)
-        // audioFileInput.classList.add("empty-file"); // Should be handled in ui.js listener
-        return;
-    }
-    // Remove green background etc. (handled by listener in ui.js)
-    // audioFileInput.classList.remove('empty-file'); 
-    
-    // REMOVED: Don't update display here, wait for decode success/fail
-    // fileInfoDisplay.innerHTML = `<p>File: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>`;
-    
-    // Stop any currently playing audio file immediately
-    stopAudioFile(); // This also clears the buffer implicitly via stopAudioSource
-    
-    // Read the file
-    fileReader.onerror = handleFileError;
-    
-    // Add progress handler
-    // fileReader.onprogress = updateLoadingProgress; // Incorrect direct assignment
-    fileReader.onprogress = (event) => {
-        if (event.lengthComputable) {
-            // Call the imported function with extracted values
-            updateLoadingProgress(event.loaded, event.total);
-        } else {
-            // Optional: Handle cases where progress isn't computable
-            // console.log('File reading progress not computable.');
-        }
-    };
+    if (!file) return; // Exit if no file selected
 
+    console.log(`File selected: ${file.name}, Size: ${file.size} bytes`);
+
+    // Reset relevant state before loading a new file
+    if (audioSource) {
+        stopAudioSource(true); // Stop any currently playing file and update state
+    }
+    audioBuffer = null; // Clear previous buffer
+    isFilePlaying = false; // Reset file playing state
+    filePauseTime = 0; // Reset pause time
+    fileStartTime = 0; // Reset start time
+    updateButtonState(playPauseFileButton, false, true); // Disable buttons until loaded
+    // playbackRateSlider.disabled = true; // Keep disabled until loaded // Already handled in handleAudioDataLoad
+
+    // Setup event listeners for the FileReader
+    fileReader.onload = handleFileLoad;
+    fileReader.onerror = handleFileError;
+
+    // Read the file as ArrayBuffer
+    console.log("Starting file read as ArrayBuffer...");
     fileReader.readAsArrayBuffer(file);
 }
 export function handleFileLoad(event) {

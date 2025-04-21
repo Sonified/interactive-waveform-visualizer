@@ -1,4 +1,4 @@
-console.log('Confirmed! This is amazing! 7:39am'); // User confirmation log
+console.log('Confirmed! This is amazing! 16:46pm'); // User confirmation log
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -220,97 +220,102 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedFile = preloadedSelect.value;
 
         if (selectedFile) {
+            // Stop any currently playing audio
             stopGeneratedAudio();
             stopAudioFile();
 
             const filePath = `Audio_Files/${selectedFile}`;
-            console.log(`Requesting preloaded file via fetch (SW should intercept): ${filePath}`);
-            actualFileInput.value = ''; 
+            console.log(`Requesting preloaded file via fetch: ${filePath}`);
+            actualFileInput.value = ''; // Clear local file input
 
-            // Use the *existing* audio loading overlay for file fetching
-            let overlayTimeoutId = null;
-            const showOverlayWithDelay = () => {
-                if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
-                overlayTimeoutId = setTimeout(() => {
-                    showLoadingOverlay(selectedFile);
-                    overlayTimeoutId = null; 
-                }, 150);
-            };
-            const clearOverlayTimeout = () => {
-                if (overlayTimeoutId) {
-                    clearTimeout(overlayTimeoutId);
-                    overlayTimeoutId = null;
-                }
-            };
-            
+            // --- NEW Fetch with Progress Tracking --- 
+            showLoadingOverlay(selectedFile); // Show overlay immediately
             try {
-                // --- REMOVE Cache Check --- 
-                /* 
-                const cache = await caches.open(AUDIO_CACHE_NAME);
-                const cachedResponse = await cache.match(filePath);
-                if (cachedResponse) { ... removed ... } 
-                */
-                // --- End Cache Check ---
-                
-                // --- Fetch (will be intercepted by SW) --- 
-                console.log(`Fetching ${selectedFile} (Service Worker will handle cache)...`);
-                showOverlayWithDelay(); 
-
-                const response = await fetch(filePath); // SW intercepts here
-
-                clearOverlayTimeout();
+                const response = await fetch(filePath);
 
                 if (!response.ok) {
-                    // If SW returns fallback or network fails, this will trigger
-                    throw new Error(`Fetch failed for ${selectedFile}! status: ${response.status}`); 
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                // --- REMOVE Cache Put --- 
-                /*
-                const responseToCache = response.clone(); 
-                await cache.put(filePath, responseToCache);
-                console.log(`Successfully fetched and cached ${selectedFile}.`);
-                */
-                // ----------------------------------
-
-                const audioData = await response.arrayBuffer(); 
-                console.log(`Fetched ${selectedFile} (via SW/Network), size: ${audioData.byteLength}.`);
-                handleAudioDataLoad(audioData, selectedFile);
-
-                const chooseFileButton = document.getElementById('choose-local-file-button');
-                if (chooseFileButton) {
-                    chooseFileButton.textContent = 'Load File'; 
+                const contentLength = response.headers.get('content-length');
+                if (!contentLength) {
+                    console.warn('Content-Length header not found, cannot show progress.');
+                    // Fallback to original method if no length
+                    const audioData = await response.arrayBuffer();
+                    console.log(`Fetched ${filePath} (no progress), size: ${audioData.byteLength} bytes.`);
+                    handleAudioDataLoad(audioData, selectedFile);
+                    hideLoadingOverlay();
+                    return; // Exit after fallback
                 }
+
+                const totalSize = parseInt(contentLength, 10);
+                let loaded = 0;
+                const reader = response.body.getReader();
+                const chunks = []; // Array to store received chunks
+
+                console.log(`Fetching ${selectedFile}, Total size: ${totalSize} bytes.`);
+
+                // Read the stream
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                        console.log("Fetch stream finished.");
+                        break; // Exit the loop when done
+                    }
+
+                    chunks.push(value);
+                    loaded += value.length;
+                    updateLoadingProgress(loaded, totalSize);
+                    // console.log(`Loaded chunk: ${value.length} bytes, Total loaded: ${loaded}`); // Debug log
+                }
+
+                // Combine chunks into a single Uint8Array
+                const allChunks = new Uint8Array(loaded);
+                let position = 0;
+                for (const chunk of chunks) {
+                    allChunks.set(chunk, position);
+                    position += chunk.length;
+                }
+
+                // Convert Uint8Array to ArrayBuffer (needed by decodeAudioData)
+                const audioData = allChunks.buffer;
+                console.log(`Finished fetching ${selectedFile}. Final size: ${audioData.byteLength} bytes.`);
+                handleAudioDataLoad(audioData, selectedFile); // Pass ArrayBuffer
 
             } catch (error) {
-                console.error(`Error loading preloaded file ${selectedFile}:`, error);
-                updateButtonState(uiControls.playPauseFileButton, false, true); 
-                 const infoDisplay = document.getElementById('file-info-display');
-                 if (infoDisplay) {
-                     infoDisplay.innerHTML = '<p>File: Error</p><p>Duration: --</p>';
-                 }
-                 const playbackRateSlider = document.getElementById('playback-rate');
-                 if (playbackRateSlider) {
-                     playbackRateSlider.disabled = true;
-                 }
+                console.error(`Error fetching or processing preloaded file ${selectedFile}:`, error);
+                // Optionally display error to user
+                const infoDisplay = document.getElementById('file-info-display');
+                if (infoDisplay) {
+                    infoDisplay.innerHTML = `<p>Error loading: ${selectedFile}</p>`;
+                }
+                updateButtonState(playPauseFileButton, false, true); // Disable play button on error
+                const playbackRateSlider = document.getElementById('playback-rate');
+                if (playbackRateSlider) playbackRateSlider.disabled = true; // Disable slider
             } finally {
-                 clearOverlayTimeout(); 
-                 hideLoadingOverlay(); 
+                hideLoadingOverlay(); // Hide overlay regardless of success or error
             }
+            // --- END NEW Fetch with Progress Tracking ---
+
         } else {
-            // Handle case where "-- Select a file --" is chosen
-            stopGeneratedAudio();
-            stopAudioFile();
-            actualFileInput.value = ''; 
+            // Handle the case where the "-- Select --" option is chosen
+            // Optional: Stop audio if needed, clear info display, disable buttons
+            // stopAudioFile(); // Maybe not needed if nothing was playing
             const infoDisplay = document.getElementById('file-info-display');
+            const playButton = document.getElementById('play-pause-file-button');
+            const restartButton = document.getElementById('restart-file-button');
+            const playbackSlider = document.getElementById('playback-rate');
             if (infoDisplay) {
-                 infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
-             }
-             const playbackRateSlider = document.getElementById('playback-rate');
-             if (playbackRateSlider) {
-                 playbackRateSlider.disabled = true;
-             }
-            updateButtonState(uiControls.playPauseFileButton, false, true); 
+                infoDisplay.innerHTML = '<p>File: --</p><p>Duration: --</p>';
+            }
+            // Update button state correctly when deselecting
+            updateButtonState(playButton, false, true);
+            if (restartButton) restartButton.disabled = true;
+            if (playbackSlider) playbackSlider.disabled = true;
+            actualFileInput.value = ''; // Clear file input value
+            console.log("Preloaded file deselected.");
         }
     });
 

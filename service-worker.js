@@ -110,7 +110,7 @@ self.addEventListener('activate', event => {
 
 // --- Fetch Event ---
 self.addEventListener('fetch', event => {
-    // console.log('[Service Worker] Fetch intercepted for:', event.request.url);
+    console.log('[Service Worker] Fetch intercepted for:', event.request.url);
     
     // Use a cache-first strategy
     event.respondWith((async () => {
