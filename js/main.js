@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.25'); // User confirmation log
-console.log("Commit: fix: Pass controls to updateNoiseType to fix ReferenceError | 2025_04_20_v1.25");
+console.log('Version: 2025_04_20_v1.26'); // User confirmation log
+console.log("Commit: docs: Update README with latest caching/progress info and fixed bugs | 2025_04_20_v1.26");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
