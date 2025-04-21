@@ -1,4 +1,5 @@
-console.log('Confirmed! This is amazing! 2025_04_20_v1.12'); // User confirmation log
+console.log('Confirmed! This is amazing! 2025_04_20_v1.13'); // User confirmation log
+console.log("Commit: refactor: Reduce fetch progress logging verbosity | 2025_04_20_v1.13");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 
@@ -277,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let loaded = 0;
                 const reader = response.body.getReader();
                 const chunks = []; // Array to store received chunks
+                let loggedMilestones = { 25: false, 50: false, 75: false }; // Track logged percentages
 
                 console.log(`Fetching ${selectedFile}, Total size: ${totalSize} bytes.`);
 
@@ -300,11 +302,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     chunks.push(value);
-                    console.log(`[Main Fetch] Pushed chunk. Total chunks: ${chunks.length}. Current loaded: ${loaded} + ${value.length} = ${loaded + value.length}`); // Added log
                     loaded += value.length;
-                    updateLoadingProgress(loaded, totalSize);
-                    console.log(`[Main Fetch] Progress updated. Loaded: ${loaded}/${totalSize}`); // Added log
-                    // console.log(`Loaded chunk: ${value.length} bytes, Total loaded: ${loaded}`); // Keep commented for now
+                    updateLoadingProgress(loaded, totalSize); // Update UI progress bar
+                    
+                    // --- Log progress intermittently ---
+                    const percent = (loaded / totalSize) * 100;
+                    if (percent >= 25 && !loggedMilestones[25]) {
+                        console.log(`[Main Fetch] Progress: ~25% loaded (${loaded}/${totalSize} bytes)`);
+                        loggedMilestones[25] = true;
+                    } else if (percent >= 50 && !loggedMilestones[50]) { 
+                        console.log(`[Main Fetch] Progress: ~50% loaded (${loaded}/${totalSize} bytes)`);
+                        loggedMilestones[50] = true;
+                    } else if (percent >= 75 && !loggedMilestones[75]) {
+                        console.log(`[Main Fetch] Progress: ~75% loaded (${loaded}/${totalSize} bytes)`);
+                        loggedMilestones[75] = true;
+                    }
+                    // --- End intermittent logging ---
                 }
 
                 console.log(`[Main Fetch] Stream loop finished. Combining ${chunks.length} chunks...`);
