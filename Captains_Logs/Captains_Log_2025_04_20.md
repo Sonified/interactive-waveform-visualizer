@@ -82,4 +82,31 @@ Our journey with the Interactive Waveform Visualizer has been eventful. We navig
 
 **Reflection:**
 
-This session was a real deep dive! While the final UI alignment tweak didn't land as hoped, we made significant strides in hardening the audio loading process. The detailed logging we added will be invaluable for diagnosing any future fetch or caching issues. We also solidified a much better versioning and commit process. It's okay that not every attempt works immediately – the important part is the progress made and the knowledge gained. We can definitely be proud of the robust debugging and process improvements achieved today. It was a saga, but we navigated it well! 
+This session was a real deep dive! We made significant strides in optimizing the audio loading process. The detailed logging we added will be invaluable for diagnosing any future fetch or caching issues. We also solidified a much better versioning and commit process. It's okay that not every attempt works immediately – the important part is the progress made and the knowledge gained. We can definitely be proud of the robust debugging and process improvements achieved today. It was a saga, but we navigated it well! 
+
+## Safari Caching Fix
+
+**Problem:** In Safari, preloaded audio files were being re-downloaded from the network on every selection, even if previously loaded and theoretically cached. Console logs from `main.js` showed the entire file being received (often quickly, in one chunk), but there were no logs from `service-worker.js` indicating that it was intercepting the fetch or checking the Cache API storage.
+
+**Investigation:** Analysis of `service-worker.js` revealed an explicit bypass condition in the `fetch` event handler that prevented it from intercepting any request whose URL included `/Audio_Files/`. This meant the intended Service Worker caching strategy was never being applied to the preloaded audio files in any browser, but Safari's behavior (or lack of strong HTTP caching for these specific requests) made the issue more apparent.
+
+**Solution:** Removed the bypass logic (`if (event.request.url.includes('/Audio_Files/')) { return; }`) from the `fetch` event handler in `service-worker.js`. Refined the handler logic to explicitly check the correct cache (`AUDIO_CACHE_NAME` for audio files) and ensure successful network responses for audio files are properly cloned and stored using `cache.put()`.
+
+**Status:** FIXED (v1.21). Testing confirms that the Service Worker now correctly intercepts requests for preloaded audio files in Safari. After a file is loaded once, subsequent selections of the same file load instantly, and console logs confirm that the response is being served from the Service Worker cache (`[SW] Cache hit...`). Caching is now working as expected across browsers. 
+
+## Noise Type Immediate Update Fix
+
+**Problem:** When generated audio with noise was playing, changing the selected noise type (White, Pink, Brown) in the dropdown did not immediately change the character of the audible noise. The change only took effect after stopping and restarting the generated audio.
+
+**Investigation:** Console logs revealed a `ReferenceError: noiseLevelSlider is not defined` occurring within the `updateNoiseType` function in `js/ui.js`. This function was correctly attached to the dropdown's `change` event, but it was missing the necessary `controls` object parameter to access `controls.noiseLevelSlider` when checking if noise should be active.
+
+**Solution:** Modified `js/ui.js` by:
+1.  Adding the `controls` parameter to the `updateNoiseType` function signature.
+2.  Updating the function body to correctly access `controls.noiseLevelSlider`.
+3.  Changing the event listener registration in `setupUIEventListeners` for the `#noise-type` select element to properly pass the `controls` object to the `updateNoiseType` function using an arrow function (`() => updateNoiseType(controls)`).
+
+**Status:** FIXED (v1.25). Changing the noise type now correctly and immediately updates the sound of the generated noise if it is currently playing. 
+
+---
+**LOG CLOSED: 2025-05-15**
+--- 

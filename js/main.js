@@ -1,5 +1,5 @@
-console.log('Version: 2025_04_20_v1.26'); // User confirmation log
-console.log("Commit: docs: Update README with latest caching/progress info and fixed bugs | 2025_04_20_v1.26");
+console.log('Version: 2025_05_15_v1.27'); // User confirmation log
+console.log("Commit: docs: Close 2025-04-20 log, start 2025-05-15. Chore: Prep for dir move | 2025_05_15_v1.27");
 
 import { 
     initializeAudioContext, handleAudioDataLoad, stopGeneratedAudio, stopAudioFile, fileReader, 

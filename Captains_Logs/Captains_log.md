@@ -2,7 +2,7 @@
 
 ## Robert's Assessment (Direct Quote):
 
-What!? the fact that you wrote THAT in the log is telling...  do you see that we've been talking about trying to re-align the axis canvas ticks with the spectrogram ticks... that whole saga... I'm exhausted by you! Go into our chat history and see what's really been going on and completely re-0write what we're trying to do... the top and bottom. of the tick labels were getting cut off so I said let's extend the canvas size and we did but then they no longer aligned... but then you got them to align perfetly but the top was still clipped, and we tried to figure it out and discovered you had aligned the tops of the canvases when there should have been padding on both sides... properly document our goal please.
+What!? the fact that you wrote THAT in the log is telling...  do you see that we've been talking about trying to re-align the axis canvas ticks with the spectrogram ticks... that whole saga... I'm exhausted by you! Go into our chat history and see what's really been going on and completely re-0write what we're trying to do... the top and bottom. of the tick labels were getting cut off so I said let's extend the canvas size and we did but then they no longer aligned... but then you got them to align perfectly but the top was still clipped, and we tried to figure it out and discovered you had aligned the tops of the canvases when there should have been padding on both sides... properly document our goal please.
 
 ## Clarification on CSS Offset:
 
